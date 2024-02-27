@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/precompile/contracts/nativeminter"
 	"github.com/holiman/uint256"
 )
 
@@ -150,8 +151,13 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	evm.interpreter = NewEVMInterpreter(evm)
 	evm.precompileManager = NewPrecompileManager(evm)
 
-	// register precompiles here, e.g:
-	// evm.precompileManager.Register(common.HexToAddress("0x1000"), nativeminter.NewNativeMinter())
+	// register precompiles here
+
+	// register native minter to 0x0000000000000000000000000000000000001000
+	evm.precompileManager.Register(
+		common.HexToAddress("0x1000"),
+		nativeminter.NewNativeMinter(common.BigToAddress(chainConfig.AstriaNativeMinterInitialOwner)),
+	)
 	// evm.precompileManager.Register(common.HexToAddress("0x1001"), compress.NewCompress())
 	// evm.precompileManager.Register(common.HexToAddress("0x1002"), jsonutil.NewJsonUtil())
 

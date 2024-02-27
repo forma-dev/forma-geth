@@ -343,6 +343,7 @@ type ChainConfig struct {
 	AstriaSequencerInitialHeight   uint32        `json:"astriaSequencerInitialHeight"`
 	AstriaCelestiaInitialHeight    uint32        `json:"astriaCelestiaInitialHeight"`
 	AstriaCelestiaHeightVariance   uint32        `json:"astriaCelestiaHeightVariance,omitempty"`
+	AstriaNativeMinterInitialOwner *big.Int      `json:"astriaNativeMinterInitialOwner,omitempty"`
 }
 
 func (c *ChainConfig) AstriaExtraData() []byte {

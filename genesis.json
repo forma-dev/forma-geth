@@ -24,5 +24,6 @@
     "astriaOverrideGenesisExtraData": true,
     "astriaSequencerInitialHeight": 1,
     "astriaDataAvailabilityInitialHeight": 1,
-    "astriaDataAvailabilityHeightVariance": 50
+    "astriaDataAvailabilityHeightVariance": 50,
+    "astriaNativeMinterInitialOwner": "0x46B77EFDFB20979E1C29ec98DcE73e3eCbF64102"
 }
