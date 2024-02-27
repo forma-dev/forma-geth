@@ -127,31 +127,41 @@ func (pm *precompileManager) Run(
 }
 
 func (pm *precompileManager) Register(addr common.Address, p precompile.StatefulPrecompiledContract) error {
+	if _, isEvmPrecompile := pm.evm.precompile(addr); isEvmPrecompile {
+		return fmt.Errorf("precompiled contract already exists at address %v", addr.Hex())
+	}
+
 	if _, exists := pm.precompiles[addr]; exists {
 		return fmt.Errorf("precompiled contract already exists at address %v", addr.Hex())
 	}
 
-	// niaeve implementation; abi method names must match precompile method names 1:1
-	// NOTE, this does not allow using solidity method overloading
+	// niaeve implementation; parsed abi method names must match precompile method names 1:1
+	//
+	// Note on method naming:
+	// Method name is the abi method name used for internal representation. It's derived from
+	// the abi raw name and a suffix will be added in the case of a function overload.
+	//
+	// e.g.
+	// These are two functions that have the same name:
+	// * foo(int,int)
+	// * foo(uint,uint)
+	// The method name of the first one will be resolved as Foo while the second one
+	// will be resolved as Foo0.
+	//
+	// Alternatively could require each precompile to define the func mapping instead of doing this magic
 	abiMethods := p.GetABI().Methods
 	contractType := reflect.ValueOf(p).Type()
 	precompileMethods := make(precompileMethods)
-	for i := 0; i < contractType.NumMethod(); i++ {
-		method := contractType.Method(i)
-		abiMethodName := strings.ToLower(string(method.Name[0])) + method.Name[1:]
-		if _, exists := abiMethods[abiMethodName]; exists {
-			methodId := methodID(abiMethods[abiMethodName].ID)
-			precompileMethods[methodId] = &statefulMethod{
-				abiMethod:     abiMethods[abiMethodName],
-				reflectMethod: method,
-			}
-		}
-	}
-
-	// Sanity check, ensure all abi methods are implemented
 	for _, abiMethod := range abiMethods {
-		if _, exists := precompileMethods[methodID(abiMethod.ID)]; !exists {
-			return fmt.Errorf("precompiled contract does not implement abi method %s", abiMethod.Name)
+		mName := strings.ToUpper(string(abiMethod.Name[0])) + abiMethod.Name[1:]
+		reflectMethod, exists := contractType.MethodByName(mName)
+		if !exists {
+			return fmt.Errorf("precompiled contract does not implement abi method %s with signature %s", abiMethod.Name, abiMethod.RawName)
+		}
+		mID := methodID(abiMethod.ID)
+		precompileMethods[mID] = &statefulMethod{
+			abiMethod:     abiMethod,
+			reflectMethod: reflectMethod,
 		}
 	}
 

@@ -153,6 +153,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	// register precompiles here, e.g:
 	// evm.precompileManager.Register(common.HexToAddress("0x1000"), nativeminter.NewNativeMinter())
 	// evm.precompileManager.Register(common.HexToAddress("0x1001"), compress.NewCompress())
+	// evm.precompileManager.Register(common.HexToAddress("0x1002"), jsonutil.NewJsonUtil())
 
 	return evm
 }
