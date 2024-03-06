@@ -153,11 +153,12 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 
 	// register precompiles here
 
-	// register native minter to 0x0000000000000000000000000000000000001000
+	// e.g. register native minter to 0x0000000000000000000000000000000000001000
 	evm.precompileManager.Register(
 		common.HexToAddress("0x1000"),
-		nativeminter.NewNativeMinter(common.BigToAddress(chainConfig.AstriaNativeMinterInitialOwner)),
+		nativeminter.NewNativeMinter(),
 	)
+
 	// evm.precompileManager.Register(common.HexToAddress("0x1001"), compress.NewCompress())
 	// evm.precompileManager.Register(common.HexToAddress("0x1002"), jsonutil.NewJsonUtil())
 
