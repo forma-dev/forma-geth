@@ -24,7 +24,14 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/precompile/contracts/nativeminter"
+
+	pcbase64 "github.com/ethereum/go-ethereum/precompile/contracts/base64"
+	pccompress "github.com/ethereum/go-ethereum/precompile/contracts/compress"
+	pcintegers "github.com/ethereum/go-ethereum/precompile/contracts/integers"
+	pcjsonutil "github.com/ethereum/go-ethereum/precompile/contracts/jsonutil"
+	pcnativeminter "github.com/ethereum/go-ethereum/precompile/contracts/nativeminter"
+	pcstrings "github.com/ethereum/go-ethereum/precompile/contracts/strings"
+
 	"github.com/holiman/uint256"
 )
 
@@ -153,14 +160,35 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 
 	// register precompiles here
 
-	// e.g. register native minter to 0x0000000000000000000000000000000000001000
 	evm.precompileManager.Register(
-		common.HexToAddress("0x1000"),
-		nativeminter.NewNativeMinter(),
+		common.HexToAddress("0x0F043A0000000000000000000000000000000001"),
+		pcnativeminter.NewNativeMinter(),
 	)
 
-	// evm.precompileManager.Register(common.HexToAddress("0x1001"), compress.NewCompress())
-	// evm.precompileManager.Register(common.HexToAddress("0x1002"), jsonutil.NewJsonUtil())
+	evm.precompileManager.Register(
+		common.HexToAddress("0x0F043A0000000000000000000000000000000002"),
+		pccompress.NewCompress(),
+	)
+
+	evm.precompileManager.Register(
+		common.HexToAddress("0x0F043A0000000000000000000000000000000003"),
+		pcjsonutil.NewJsonUtil(),
+	)
+
+	evm.precompileManager.Register(
+		common.HexToAddress("0x0F043A0000000000000000000000000000000004"),
+		pcbase64.NewBase64(),
+	)
+
+	evm.precompileManager.Register(
+		common.HexToAddress("0x0F043A0000000000000000000000000000000005"),
+		pcstrings.NewStrings(),
+	)
+
+	evm.precompileManager.Register(
+		common.HexToAddress("0x0F043A0000000000000000000000000000000006"),
+		pcintegers.NewIntegers(),
+	)
 
 	return evm
 }
