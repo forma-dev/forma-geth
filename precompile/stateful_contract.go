@@ -6,6 +6,16 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
+// Gas costs
+const (
+	GasFree      uint64 = 0
+	GasQuickStep uint64 = 2
+	GasFastStep  uint64 = 40
+	GasMidStep   uint64 = 100
+	GasSlowStep  uint64 = 400
+	GasExtStep   uint64 = 2000
+)
+
 type statefulPrecompiledContract struct {
 	abi abi.ABI
 }
@@ -27,5 +37,5 @@ func (spc *statefulPrecompiledContract) GetABI() abi.ABI {
 func (spc *statefulPrecompiledContract) RequiredGas(input []byte) uint64 {
 	// This is a placeholder implementation. The actual gas required would depend on the specific contract.
 	// You should replace this with the actual implementation.
-	return 0
+	return GasFree
 }
