@@ -100,7 +100,13 @@ func (pm *precompileManager) Run(
 		defer func() { ctx.SetReadOnly(false) }()
 	}
 
-	results := method.reflectMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(ctx)}, reflectedUnpackedArgs...))
+	results := method.reflectMethod.Func.Call(append(
+		[]reflect.Value{
+			reflect.ValueOf(contract),
+			reflect.ValueOf(ctx),
+		},
+		reflectedUnpackedArgs...,
+	))
 
 	// check if precompile returned an error
 	if len(results) > 0 {
