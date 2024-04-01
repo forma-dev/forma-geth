@@ -161,32 +161,32 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	// register precompiles here
 
 	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A0000000000000000000000000000000001"),
+		common.HexToAddress("0x0F043A000001"),
 		pcnativeminter.NewNativeMinter(),
 	)
 
 	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A0000000000000000000000000000000002"),
+		common.HexToAddress("0x0F043A000002"),
 		pccompress.NewCompress(),
 	)
 
 	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A0000000000000000000000000000000003"),
+		common.HexToAddress("0x0F043A000003"),
 		pcjsonutil.NewJsonUtil(),
 	)
 
 	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A0000000000000000000000000000000004"),
+		common.HexToAddress("0x0F043A000004"),
 		pcbase64.NewBase64(),
 	)
 
 	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A0000000000000000000000000000000005"),
+		common.HexToAddress("0x0F043A000005"),
 		pcstrings.NewStrings(),
 	)
 
 	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A0000000000000000000000000000000006"),
+		common.HexToAddress("0x0F043A000006"),
 		pcintegers.NewIntegers(),
 	)
 
