@@ -91,6 +91,12 @@ func (pm *precompileManager) Run(
 		reflectedUnpackedArgs = append(reflectedUnpackedArgs, reflect.ValueOf(unpacked))
 	}
 
+	// set precompile nonce to 1 to avoid state deletion for being considered an empty account
+	// this conforms precompile contracts to EIP-161
+	if pm.evm.StateDB.GetNonce(addr) == 0 {
+		pm.evm.StateDB.SetNonce(addr, 1)
+	}
+
 	ctx := precompile.NewStatefulContext(pm.evm.StateDB, addr, caller, value)
 
 	// Make sure the readOnly is only set if we aren't in readOnly yet.
