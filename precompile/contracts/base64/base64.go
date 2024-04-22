@@ -27,6 +27,22 @@ func (c *Base64) EncodeURL(ctx precompile.StatefulContext, data []byte) (string,
 	return b64.URLEncoding.EncodeToString(data), nil
 }
 
+func (c *Base64) Decode(ctx precompile.StatefulContext, data string) ([]byte, error) {
+	decoded, err := b64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return nil, err
+	}
+	return decoded, nil
+}
+
+func (c *Base64) DecodeURL(ctx precompile.StatefulContext, data string) ([]byte, error) {
+	decoded, err := b64.URLEncoding.DecodeString(data)
+	if err != nil {
+		return nil, err
+	}
+	return decoded, nil
+}
+
 func (c *Base64) RequiredGas(input []byte) uint64 {
 	return precompile.GasQuickStep
 }

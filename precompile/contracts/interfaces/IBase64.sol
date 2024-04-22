@@ -7,4 +7,8 @@ interface IBase64 {
 
     function encodeURL(bytes calldata data) view external returns (string memory);
 
+    function decode(string calldata data) view external returns (bytes memory);
+
+    function decodeURL(string calldata data) view external returns (bytes memory);
+
 }
