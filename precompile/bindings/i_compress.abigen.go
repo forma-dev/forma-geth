@@ -31,7 +31,7 @@ var (
 
 // CompressMetaData contains all meta data concerning the Compress contract.
 var CompressMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"deflate\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"inflate\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"compress\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"decompress\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"}]",
 }
 
 // CompressABI is the input ABI used to generate the binding from.
@@ -180,12 +180,12 @@ func (_Compress *CompressTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Compress.Contract.contract.Transact(opts, method, params...)
 }
 
-// Deflate is a free data retrieval call binding the contract method 0x6a871d07.
+// Compress is a free data retrieval call binding the contract method 0x7e2224bd.
 //
-// Solidity: function deflate(bytes data) view returns(bytes)
-func (_Compress *CompressCaller) Deflate(opts *bind.CallOpts, data []byte) ([]byte, error) {
+// Solidity: function compress(bytes data) view returns(bytes)
+func (_Compress *CompressCaller) Compress(opts *bind.CallOpts, data []byte) ([]byte, error) {
 	var out []interface{}
-	err := _Compress.contract.Call(opts, &out, "deflate", data)
+	err := _Compress.contract.Call(opts, &out, "compress", data)
 
 	if err != nil {
 		return *new([]byte), err
@@ -197,26 +197,26 @@ func (_Compress *CompressCaller) Deflate(opts *bind.CallOpts, data []byte) ([]by
 
 }
 
-// Deflate is a free data retrieval call binding the contract method 0x6a871d07.
+// Compress is a free data retrieval call binding the contract method 0x7e2224bd.
 //
-// Solidity: function deflate(bytes data) view returns(bytes)
-func (_Compress *CompressSession) Deflate(data []byte) ([]byte, error) {
-	return _Compress.Contract.Deflate(&_Compress.CallOpts, data)
+// Solidity: function compress(bytes data) view returns(bytes)
+func (_Compress *CompressSession) Compress(data []byte) ([]byte, error) {
+	return _Compress.Contract.Compress(&_Compress.CallOpts, data)
 }
 
-// Deflate is a free data retrieval call binding the contract method 0x6a871d07.
+// Compress is a free data retrieval call binding the contract method 0x7e2224bd.
 //
-// Solidity: function deflate(bytes data) view returns(bytes)
-func (_Compress *CompressCallerSession) Deflate(data []byte) ([]byte, error) {
-	return _Compress.Contract.Deflate(&_Compress.CallOpts, data)
+// Solidity: function compress(bytes data) view returns(bytes)
+func (_Compress *CompressCallerSession) Compress(data []byte) ([]byte, error) {
+	return _Compress.Contract.Compress(&_Compress.CallOpts, data)
 }
 
-// Inflate is a free data retrieval call binding the contract method 0x03a353bd.
+// Decompress is a free data retrieval call binding the contract method 0x5cd3f3a1.
 //
-// Solidity: function inflate(bytes data) view returns(bytes)
-func (_Compress *CompressCaller) Inflate(opts *bind.CallOpts, data []byte) ([]byte, error) {
+// Solidity: function decompress(bytes data) view returns(bytes)
+func (_Compress *CompressCaller) Decompress(opts *bind.CallOpts, data []byte) ([]byte, error) {
 	var out []interface{}
-	err := _Compress.contract.Call(opts, &out, "inflate", data)
+	err := _Compress.contract.Call(opts, &out, "decompress", data)
 
 	if err != nil {
 		return *new([]byte), err
@@ -228,16 +228,16 @@ func (_Compress *CompressCaller) Inflate(opts *bind.CallOpts, data []byte) ([]by
 
 }
 
-// Inflate is a free data retrieval call binding the contract method 0x03a353bd.
+// Decompress is a free data retrieval call binding the contract method 0x5cd3f3a1.
 //
-// Solidity: function inflate(bytes data) view returns(bytes)
-func (_Compress *CompressSession) Inflate(data []byte) ([]byte, error) {
-	return _Compress.Contract.Inflate(&_Compress.CallOpts, data)
+// Solidity: function decompress(bytes data) view returns(bytes)
+func (_Compress *CompressSession) Decompress(data []byte) ([]byte, error) {
+	return _Compress.Contract.Decompress(&_Compress.CallOpts, data)
 }
 
-// Inflate is a free data retrieval call binding the contract method 0x03a353bd.
+// Decompress is a free data retrieval call binding the contract method 0x5cd3f3a1.
 //
-// Solidity: function inflate(bytes data) view returns(bytes)
-func (_Compress *CompressCallerSession) Inflate(data []byte) ([]byte, error) {
-	return _Compress.Contract.Inflate(&_Compress.CallOpts, data)
+// Solidity: function decompress(bytes data) view returns(bytes)
+func (_Compress *CompressCallerSession) Decompress(data []byte) ([]byte, error) {
+	return _Compress.Contract.Decompress(&_Compress.CallOpts, data)
 }

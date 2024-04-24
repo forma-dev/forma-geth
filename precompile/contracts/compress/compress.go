@@ -2,15 +2,18 @@ package compress
 
 import (
 	"bytes"
-	"compress/gzip"
 	"io"
 
+	"github.com/andybalholm/brotli"
 	"github.com/ethereum/go-ethereum/precompile"
 	"github.com/ethereum/go-ethereum/precompile/bindings"
 )
 
 type Compress struct {
 	precompile.StatefulPrecompiledContract
+
+	reader *brotli.Reader
+	writer *brotli.Writer
 }
 
 func NewCompress() *Compress {
@@ -18,33 +21,29 @@ func NewCompress() *Compress {
 		StatefulPrecompiledContract: precompile.NewStatefulPrecompiledContract(
 			bindings.CompressABI,
 		),
+		reader: brotli.NewReader(nil),
+		writer: brotli.NewWriterLevel(nil, brotli.DefaultCompression),
 	}
 }
 
-func (c *Compress) Deflate(ctx precompile.StatefulContext, input []byte) ([]byte, error) {
+func (c *Compress) Compress(ctx precompile.StatefulContext, input []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	_, err := gz.Write(input)
+	c.writer.Reset(&buf)
+	_, err := c.writer.Write(input)
 	if err != nil {
 		return nil, err
 	}
-	if err := gz.Close(); err != nil {
+	if err := c.writer.Close(); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func (c *Compress) Inflate(ctx precompile.StatefulContext, input []byte) ([]byte, error) {
+func (c *Compress) Decompress(ctx precompile.StatefulContext, input []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	gz, err := gzip.NewReader(bytes.NewBuffer(input))
+	c.reader.Reset(bytes.NewReader(input))
+	_, err := io.Copy(&buf, c.reader)
 	if err != nil {
-		return nil, err
-	}
-	_, err = io.Copy(&buf, gz)
-	if err != nil {
-		return nil, err
-	}
-	if err := gz.Close(); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
