@@ -31,7 +31,7 @@ var (
 
 // Base64MetaData contains all meta data concerning the Base64 contract.
 var Base64MetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"encode\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"encodeURL\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"decode\",\"inputs\":[{\"name\":\"data\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"decodeURL\",\"inputs\":[{\"name\":\"data\",\"type\":\"string\",\"internalType\":\"string\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"encode\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"encodeURL\",\"inputs\":[{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"}]",
 }
 
 // Base64ABI is the input ABI used to generate the binding from.
@@ -178,6 +178,68 @@ func (_Base64 *Base64TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Tr
 // Transact invokes the (paid) contract method with params as input values.
 func (_Base64 *Base64TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _Base64.Contract.contract.Transact(opts, method, params...)
+}
+
+// Decode is a free data retrieval call binding the contract method 0x49145c91.
+//
+// Solidity: function decode(string data) view returns(bytes)
+func (_Base64 *Base64Caller) Decode(opts *bind.CallOpts, data string) ([]byte, error) {
+	var out []interface{}
+	err := _Base64.contract.Call(opts, &out, "decode", data)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// Decode is a free data retrieval call binding the contract method 0x49145c91.
+//
+// Solidity: function decode(string data) view returns(bytes)
+func (_Base64 *Base64Session) Decode(data string) ([]byte, error) {
+	return _Base64.Contract.Decode(&_Base64.CallOpts, data)
+}
+
+// Decode is a free data retrieval call binding the contract method 0x49145c91.
+//
+// Solidity: function decode(string data) view returns(bytes)
+func (_Base64 *Base64CallerSession) Decode(data string) ([]byte, error) {
+	return _Base64.Contract.Decode(&_Base64.CallOpts, data)
+}
+
+// DecodeURL is a free data retrieval call binding the contract method 0x7419397a.
+//
+// Solidity: function decodeURL(string data) view returns(bytes)
+func (_Base64 *Base64Caller) DecodeURL(opts *bind.CallOpts, data string) ([]byte, error) {
+	var out []interface{}
+	err := _Base64.contract.Call(opts, &out, "decodeURL", data)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// DecodeURL is a free data retrieval call binding the contract method 0x7419397a.
+//
+// Solidity: function decodeURL(string data) view returns(bytes)
+func (_Base64 *Base64Session) DecodeURL(data string) ([]byte, error) {
+	return _Base64.Contract.DecodeURL(&_Base64.CallOpts, data)
+}
+
+// DecodeURL is a free data retrieval call binding the contract method 0x7419397a.
+//
+// Solidity: function decodeURL(string data) view returns(bytes)
+func (_Base64 *Base64CallerSession) DecodeURL(data string) ([]byte, error) {
+	return _Base64.Contract.DecodeURL(&_Base64.CallOpts, data)
 }
 
 // Encode is a free data retrieval call binding the contract method 0x12496a1b.
