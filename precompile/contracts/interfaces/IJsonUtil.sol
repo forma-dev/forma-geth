@@ -7,6 +7,8 @@ interface IJsonUtil {
 
   function get(string calldata jsonBlob, string calldata path) view external returns (string memory);
 
+  function getRaw(string calldata jsonBlob, string calldata path) view external returns (string memory);
+
   function getInt(string calldata jsonBlob, string calldata path) view external returns (int256);
 
   function getUint(string calldata jsonBlob, string calldata path) view external returns (uint256);

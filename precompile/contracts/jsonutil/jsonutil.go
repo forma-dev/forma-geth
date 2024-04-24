@@ -53,6 +53,15 @@ func (c *JsonUtil) Get(ctx precompile.StatefulContext, jsonBlob string, path str
 	return filteredVal.String(), nil
 }
 
+// Solidity: function getRaw(string jsonBlob, string path) view returns(string)
+func (c *JsonUtil) GetRaw(ctx precompile.StatefulContext, jsonBlob string, path string) (string, error) {
+	filteredVal, err := jsonGet(jsonBlob, path)
+	if err != nil {
+		return "", err
+	}
+	return filteredVal.Raw, nil
+}
+
 // Solidity: function getBool(string jsonBlob, string path) view returns(bool)
 func (c *JsonUtil) GetBool(ctx precompile.StatefulContext, jsonBlob string, path string) (bool, error) {
 	filteredVal, err := jsonGet(jsonBlob, path)
