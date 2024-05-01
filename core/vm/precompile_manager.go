@@ -98,7 +98,7 @@ func (pm *precompileManager) Run(
 
 	// set precompile nonce to 1 to avoid state deletion for being considered an empty account
 	// this conforms precompile contracts to EIP-161
-	if pm.evm.StateDB.GetNonce(addr) == 0 {
+	if !readOnly && pm.evm.StateDB.GetNonce(addr) == 0 {
 		pm.evm.StateDB.SetNonce(addr, 1)
 	}
 
