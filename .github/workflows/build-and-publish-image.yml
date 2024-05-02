@@ -13,9 +13,17 @@ on:
     branches:
       - "main"
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build-and-publish-latest:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
     steps:
       # Checking out the repo
       - name: Checkout repository
@@ -23,13 +31,13 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # Setting up Go
       - uses: actions/setup-go@v4
         with:
-          go-version: "^1.22.x" # The Go version to download (if necessary) and use.
+          go-version: "^1.21.x" # The Go version to download (if necessary) and use.
       - run: go version
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
@@ -43,8 +51,7 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v4
         with:
-          images: |
-            ghcr.io/forma-dev/forma-geth
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=pr
             type=match,pattern=v(.*),group=1
@@ -52,14 +59,18 @@ jobs:
             # set latest tag for `main` branch
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v4
         with:
-          # this gets rid of the unknown/unknown image that is created without this setting
-          # https://github.com/docker/build-push-action/issues/820#issuecomment-1455687416
-          provenance: false
+          provenance: mode=max
           context: .
-          # It takes a long time to build the arm image right now, so we only build it on tags which is what we use for releases, or on merges to the default branch.
-          platforms: ${{ (contains(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
