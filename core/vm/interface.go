@@ -99,4 +99,5 @@ type PrecompileManager interface {
 	IsPrecompile(addr common.Address) bool
 	Run(addr common.Address, input []byte, caller common.Address, value *big.Int, suppliedGas uint64, readonly bool) (ret []byte, remainingGas uint64, err error)
 	Register(addr common.Address, p precompile.StatefulPrecompiledContract) error
+	RegisterMap(m precompile.PrecompileMap) error
 }

@@ -32,3 +32,5 @@ type StatefulPrecompiledContract interface {
 	GetABI() abi.ABI
 	DefaultGas(input []byte) uint64
 }
+
+type PrecompileMap map[common.Address]StatefulPrecompiledContract

@@ -24,13 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-
-	pcbase64 "github.com/ethereum/go-ethereum/precompile/contracts/base64"
-	pccompress "github.com/ethereum/go-ethereum/precompile/contracts/compress"
-	pcintegers "github.com/ethereum/go-ethereum/precompile/contracts/integers"
-	pcjsonutil "github.com/ethereum/go-ethereum/precompile/contracts/jsonutil"
-	pcnativeminter "github.com/ethereum/go-ethereum/precompile/contracts/nativeminter"
-	pcstrings "github.com/ethereum/go-ethereum/precompile/contracts/strings"
+	pConfig "github.com/ethereum/go-ethereum/precompile/config"
 
 	"github.com/holiman/uint256"
 )
@@ -156,39 +150,10 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 		chainRules:  chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil, blockCtx.Time),
 	}
 	evm.interpreter = NewEVMInterpreter(evm)
+
+	// Set up precompiles
 	evm.precompileManager = NewPrecompileManager(evm)
-
-	// register precompiles here
-
-	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A000001"),
-		pcnativeminter.NewNativeMinter(),
-	)
-
-	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A000002"),
-		pccompress.NewCompress(),
-	)
-
-	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A000003"),
-		pcjsonutil.NewJsonUtil(),
-	)
-
-	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A000004"),
-		pcbase64.NewBase64(),
-	)
-
-	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A000005"),
-		pcstrings.NewStrings(),
-	)
-
-	evm.precompileManager.Register(
-		common.HexToAddress("0x0F043A000006"),
-		pcintegers.NewIntegers(),
-	)
+	evm.precompileManager.RegisterMap(pConfig.Precompiles(blockCtx.BlockNumber.Uint64()))
 
 	return evm
 }

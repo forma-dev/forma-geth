@@ -171,6 +171,16 @@ func (pm *precompileManager) Run(
 	return output, suppliedGas, nil
 }
 
+func (pm *precompileManager) RegisterMap(m precompile.PrecompileMap) error {
+	for addr, p := range m {
+		err := pm.Register(addr, p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (pm *precompileManager) Register(addr common.Address, p precompile.StatefulPrecompiledContract) error {
 	if _, isEvmPrecompile := pm.evm.precompile(addr); isEvmPrecompile {
 		return fmt.Errorf("precompiled contract already exists at address %v", addr.Hex())
