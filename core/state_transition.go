@@ -438,6 +438,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), msg.Data, st.gasRemaining, msg.Value)
 	}
 
+	// Forma: Make inbound Hyperlane tx (bridge in) a fixed gas cost
+	if st.evm.ChainConfig().IsForma() && st.to().Cmp(st.evm.ChainConfig().Forma.HyperlaneMailbox) == 0 {
+		st.gasRemaining = st.initialGas - params.FormaHyperlaneTxGas
+		st.state.SubRefund(st.state.GetRefund())
+	}
+
 	if !rules.IsLondon {
 		// Before EIP-3529: refunds were capped to gasUsed / 2
 		st.refundGas(params.RefundQuotient)

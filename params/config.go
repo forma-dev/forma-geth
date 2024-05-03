@@ -348,6 +348,17 @@ type ChainConfig struct {
 	AstriaBridgeAddressConfigs     []AstriaBridgeAddressConfig `json:"astriaBridgeAddresses,omitempty"`
 	AstriaFeeCollectors            map[uint32]common.Address   `json:"astriaFeeCollectors"`
 	AstriaEIP1559Params            *AstriaEIP1559Params        `json:"astriaEIP1559Params,omitempty"`
+
+	// Forma Specific Configuration
+	Forma *FormaConfig `json:"forma,omitempty"`
+}
+
+type FormaConfig struct {
+	HyperlaneMailbox common.Address `json:"hyperlaneMailbox"`
+}
+
+func (c *ChainConfig) IsForma() bool {
+	return c.Forma != nil
 }
 
 func (c *ChainConfig) AstriaExtraData() []byte {
