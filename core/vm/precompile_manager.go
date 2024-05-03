@@ -75,8 +75,12 @@ func (pm *precompileManager) Run(
 		return nil, 0, fmt.Errorf("no method with id %v in precompiled contract at address %v", methodId, addr.Hex())
 	}
 
-	// reduce gas for calling custom precompiles from CallGasEIP150 back to CallGasFrontier
-	suppliedGas = suppliedGas + (params.CallGasEIP150 - params.CallGasFrontier)
+	// refund gas for act of calling custom precompile
+	if pm.evm.chainRules.IsEIP150 {
+		suppliedGas -= params.CallGasEIP150
+	} else {
+		suppliedGas -= params.CallGasFrontier
+	}
 
 	// check if enough gas is supplied
 	gasCost := contract.RequiredGas(input)
