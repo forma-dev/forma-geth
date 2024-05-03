@@ -436,12 +436,19 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From, st.state.GetNonce(sender.Address())+1)
 		ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), msg.Data, st.gasRemaining, msg.Value)
-	}
 
-	// Forma: Make inbound Hyperlane tx (bridge in) a fixed gas cost
-	if st.evm.ChainConfig().IsForma() && st.to().Cmp(st.evm.ChainConfig().Forma.HyperlaneMailbox) == 0 {
-		st.gasRemaining = st.initialGas - params.FormaHyperlaneTxGas
-		st.state.SubRefund(st.state.GetRefund())
+		// Forma: Make inbound Hyperlane tx (bridge in) a fixed gas cost
+		if st.evm.ChainConfig().IsForma() && st.to().Cmp(st.evm.ChainConfig().Forma.HyperlaneMailbox) == 0 && len(msg.Data) > 0 {
+			var methodId [4]byte = [4]byte(msg.Data[:4])
+			// Function: process(bytes _metadata,bytes _message)
+			var depositMethodId [4]byte = [4]byte{0x7c, 0x39, 0xd1, 0x30}
+			if methodId == depositMethodId && st.initialGas > params.FormaHyperlaneTxGas {
+				st.gasRemaining = st.initialGas - params.FormaHyperlaneTxGas
+				if st.state.GetRefund() > 0 {
+					st.state.SubRefund(st.state.GetRefund())
+				}
+			}
+		}
 	}
 
 	if !rules.IsLondon {
