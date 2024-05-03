@@ -8,13 +8,18 @@ import (
 
 // Gas costs
 const (
-	GasFree      uint64 = 0
-	GasQuickStep uint64 = 2
-	GasFastStep  uint64 = 40
-	GasMidStep   uint64 = 100
-	GasSlowStep  uint64 = 400
-	GasExtStep   uint64 = 2000
+	GasFree        uint64 = 0
+	GasQuickStep   uint64 = 2
+	GasFastestStep uint64 = 3
+	GasFastStep    uint64 = 5
+	GasMidStep     uint64 = 8
+	GasSlowStep    uint64 = 10
+	GasExtStep     uint64 = 20
 )
+
+func WordLength(input []byte, wordSize uint64) uint64 {
+	return (uint64(len(input)) + wordSize - 1) / wordSize
+}
 
 type statefulPrecompiledContract struct {
 	abi abi.ABI
@@ -34,8 +39,8 @@ func (spc *statefulPrecompiledContract) GetABI() abi.ABI {
 	return spc.abi
 }
 
-func (spc *statefulPrecompiledContract) RequiredGas(input []byte) uint64 {
-	// This is a placeholder implementation. The actual gas required would depend on the specific contract.
-	// You should replace this with the actual implementation.
+// This is a placeholder implementation. The actual gas required would depend on the specific contract.
+// You should replace this with the actual implementation.
+func (spc *statefulPrecompiledContract) DefaultGas(input []byte) uint64 {
 	return GasFree
 }

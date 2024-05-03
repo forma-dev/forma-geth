@@ -20,20 +20,24 @@ type statefulMethod struct {
 }
 
 type precompileMethods map[methodID]*statefulMethod
+type gasMethods map[methodID]reflect.Method
 
 type precompileManager struct {
 	evm         *EVM
 	precompiles map[common.Address]precompile.StatefulPrecompiledContract
 	pMethods    map[common.Address]precompileMethods
+	gMethods    map[common.Address]gasMethods
 }
 
 func NewPrecompileManager(evm *EVM) PrecompileManager {
 	precompiles := make(map[common.Address]precompile.StatefulPrecompiledContract)
 	pMethods := make(map[common.Address]precompileMethods)
+	gMethods := make(map[common.Address]gasMethods)
 	return &precompileManager{
 		evm:         evm,
 		precompiles: precompiles,
 		pMethods:    pMethods,
+		gMethods:    gMethods,
 	}
 }
 
@@ -84,12 +88,6 @@ func (pm *precompileManager) Run(
 		}
 	}
 
-	// check if enough gas is supplied
-	gasCost := contract.RequiredGas(input)
-	if gasCost > suppliedGas {
-		return nil, 0, ErrOutOfGas
-	}
-
 	// Unpack the input arguments using the ABI method's inputs
 	unpackedArgs, err := method.abiMethod.Inputs.Unpack(input[4:])
 	if err != nil {
@@ -117,6 +115,30 @@ func (pm *precompileManager) Run(
 		defer func() { ctx.SetReadOnly(false) }()
 	}
 
+	// check if enough gas is supplied
+	var gasCost uint64 = contract.DefaultGas(input)
+	gasMethod, exists := pm.gMethods[addr][methodId]
+	if exists {
+		gasResult := gasMethod.Func.Call(append(
+			[]reflect.Value{
+				reflect.ValueOf(contract),
+				reflect.ValueOf(ctx),
+			},
+			reflectedUnpackedArgs...,
+		))
+		if len(gasResult) > 0 {
+			gasCost, ok = gasResult[0].Interface().(uint64)
+			if !ok {
+				gasCost = contract.DefaultGas(input)
+			}
+		}
+	}
+
+	if gasCost > suppliedGas {
+		return nil, 0, ErrOutOfGas
+	}
+
+	// call the precompile method
 	results := method.reflectMethod.Func.Call(append(
 		[]reflect.Value{
 			reflect.ValueOf(contract),
@@ -175,6 +197,7 @@ func (pm *precompileManager) Register(addr common.Address, p precompile.Stateful
 	abiMethods := p.GetABI().Methods
 	contractType := reflect.ValueOf(p).Type()
 	precompileMethods := make(precompileMethods)
+	gasMethods := make(gasMethods)
 	for _, abiMethod := range abiMethods {
 		mName := strings.ToUpper(string(abiMethod.Name[0])) + abiMethod.Name[1:]
 		reflectMethod, exists := contractType.MethodByName(mName)
@@ -186,9 +209,20 @@ func (pm *precompileManager) Register(addr common.Address, p precompile.Stateful
 			abiMethod:     abiMethod,
 			reflectMethod: reflectMethod,
 		}
+
+		// precompile method has custom gas calc
+		gName := mName + "RequiredGas"
+		gasMethod, exists := contractType.MethodByName(gName)
+		if exists {
+			if gasMethod.Type.NumOut() != 1 || gasMethod.Type.Out(0).Kind() != reflect.Uint64 {
+				return fmt.Errorf("gas method %s does not return uint64", gName)
+			}
+			gasMethods[mID] = gasMethod
+		}
 	}
 
 	pm.precompiles[addr] = p
 	pm.pMethods[addr] = precompileMethods
+	pm.gMethods[addr] = gasMethods
 	return nil
 }

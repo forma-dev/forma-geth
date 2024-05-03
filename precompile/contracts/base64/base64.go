@@ -43,6 +43,19 @@ func (c *Base64) DecodeURL(ctx precompile.StatefulContext, data string) ([]byte,
 	return decoded, nil
 }
 
-func (c *Base64) RequiredGas(input []byte) uint64 {
-	return precompile.GasQuickStep
+// gas calcs
+func (c *Base64) EncodeRequiredGas(ctx precompile.StatefulContext, data []byte) uint64 {
+	return precompile.WordLength(data, 256) * precompile.GasQuickStep
+}
+
+func (c *Base64) EncodeURLRequiredGas(ctx precompile.StatefulContext, data []byte) uint64 {
+	return precompile.WordLength(data, 256) * precompile.GasQuickStep
+}
+
+func (c *Base64) DecodeRequiredGas(ctx precompile.StatefulContext, data string) uint64 {
+	return precompile.WordLength([]byte(data), 256) * precompile.GasQuickStep
+}
+
+func (c *Base64) DecodeURLRequiredGas(ctx precompile.StatefulContext, data string) uint64 {
+	return precompile.WordLength([]byte(data), 256) * precompile.GasQuickStep
 }

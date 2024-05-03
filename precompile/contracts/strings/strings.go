@@ -101,6 +101,6 @@ func (c *Strings) Trim(ctx precompile.StatefulContext, str string) (string, erro
 	return strings.TrimSpace(str), nil
 }
 
-func (c *Strings) RequiredGas(input []byte) uint64 {
+func (c *Strings) DefaultGas(input []byte) uint64 {
 	return precompile.GasFastStep
 }

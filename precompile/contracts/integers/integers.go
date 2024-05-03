@@ -51,6 +51,6 @@ func (c *Integers) FromHexString(ctx precompile.StatefulContext, str string) (*b
 	return i, nil
 }
 
-func (c *Integers) RequiredGas(input []byte) uint64 {
+func (c *Integers) DefaultGas(input []byte) uint64 {
 	return precompile.GasQuickStep
 }

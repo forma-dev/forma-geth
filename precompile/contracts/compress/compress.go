@@ -49,6 +49,11 @@ func (c *Compress) Decompress(ctx precompile.StatefulContext, input []byte) ([]b
 	return buf.Bytes(), nil
 }
 
-func (c *Compress) RequiredGas(input []byte) uint64 {
-	return precompile.GasQuickStep
+// gas calcs
+func (c *Compress) CompressRequiredGas(ctx precompile.StatefulContext, input []byte) uint64 {
+	return precompile.WordLength(input, 256) * precompile.GasQuickStep
+}
+
+func (c *Compress) DecompressRequiredGas(ctx precompile.StatefulContext, input []byte) uint64 {
+	return precompile.WordLength(input, 256) * precompile.GasQuickStep
 }

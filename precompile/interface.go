@@ -30,5 +30,5 @@ type StatefulContext interface {
 
 type StatefulPrecompiledContract interface {
 	GetABI() abi.ABI
-	RequiredGas(input []byte) uint64 // RequiredPrice calculates the contract gas use
+	DefaultGas(input []byte) uint64
 }

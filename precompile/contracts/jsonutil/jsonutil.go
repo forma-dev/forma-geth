@@ -232,6 +232,10 @@ func (c *JsonUtil) Remove(ctx precompile.StatefulContext, jsonBlob string, path 
 	return updatedJson, nil
 }
 
+func (c *JsonUtil) DefaultGas(input []byte) uint64 {
+	return precompile.GasFastStep
+}
+
 func jsonGet(jsonBlob string, path string) (gjson.Result, error) {
 	validationErr := fastjson.Validate(jsonBlob)
 	if validationErr != nil {
