@@ -78,9 +78,9 @@ func (pm *precompileManager) Run(
 	// refund gas for act of calling custom precompile
 	if suppliedGas > 0 {
 		if pm.evm.chainRules.IsEIP150 && suppliedGas > params.CallGasEIP150 {
-			suppliedGas -= params.CallGasEIP150
+			suppliedGas += params.CallGasEIP150
 		} else if suppliedGas > params.CallGasFrontier {
-			suppliedGas -= params.CallGasFrontier
+			suppliedGas += params.CallGasFrontier
 		}
 	}
 
