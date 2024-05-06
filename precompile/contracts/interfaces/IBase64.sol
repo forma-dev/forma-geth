@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.24;
 
 interface IBase64 {
 
-    function encode(bytes calldata data) view external returns (string memory);
+    /// @dev Encodes the input data into a base64 string
+    function encode(bytes memory _data) external pure returns (string memory);
 
-    function encodeURL(bytes calldata data) view external returns (string memory);
+    /// @dev Encodes the input data into a URL-safe base64 string
+    function encodeURL(bytes memory _data) external pure returns (string memory);
 
-    function decode(string calldata data) view external returns (bytes memory);
+    /// @dev Decodes the input base64 string into bytes
+    function decode(string memory _data) external pure returns (bytes memory);
 
-    function decodeURL(string calldata data) view external returns (bytes memory);
+    /// @dev Decodes the input URL-safe base64 string into bytes
+    function decodeURL(string memory _data) external pure returns (bytes memory);
 
 }

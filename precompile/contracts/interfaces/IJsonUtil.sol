@@ -1,66 +1,82 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.24;
 
 interface IJsonUtil {
 
-  /////////////////////////////////////// READ METHODS (on jsonBlob) //////////////////////////////////////////
+  /// @dev Retrieves the value at the specified path in the JSON blob.
+  function get(string memory _jsonBlob, string memory _path) external pure returns (string memory);
 
-  function get(string calldata jsonBlob, string calldata path) view external returns (string memory);
+  /// @dev Retrieves the raw value at the specified path in the JSON blob.
+  function getRaw(string memory _jsonBlob, string memory _path) external pure returns (string memory);
 
-  function getRaw(string calldata jsonBlob, string calldata path) view external returns (string memory);
+  /// @dev Retrieves the `int256` value at the specified path in the JSON blob.
+  function getInt(string memory _jsonBlob, string memory _path) external pure returns (int256);
 
-  function getInt(string calldata jsonBlob, string calldata path) view external returns (int256);
+  /// @dev Retrieves the `uint256` value at the specified path in the JSON blob.
+  function getUint(string memory _jsonBlob, string memory _path) external pure returns (uint256);
 
-  function getUint(string calldata jsonBlob, string calldata path) view external returns (uint256);
+  /// @dev Retrieves the `bool` value at the specified path in the JSON blob.
+  function getBool(string memory _jsonBlob, string memory _path) external pure returns (bool);
 
-  function getBool(string calldata jsonBlob, string calldata path) view external returns (bool);
+  /// @dev Converts the JSON blob into a base64 encoded data URI.
+  function dataURI(string memory _jsonBlob) external pure returns (string memory);
 
-  function dataURI(string calldata jsonBlob) view external returns (string memory);
+  /// @dev Checks if a value exists at the specified path in the JSON blob.
+  function exists(string memory _jsonBlob, string memory _path) external pure returns (bool);
 
-  function exists(string calldata jsonBlob, string calldata path) view external returns (bool);
+  /// @dev Validates the JSON blob.
+  function validate(string memory _jsonBlob) external pure returns (bool);
 
-  function validate(string calldata jsonBlob) view external returns (bool);
+  /// @dev Compacts the JSON blob.
+  function compact(string memory _jsonBlob) external pure returns (string memory);
 
-  ////////////////////////////////////// MODIFICATION VIEWS (on jsonBlob) //////////////////////////////////////////
+  /// @dev Sets the value at the specified path in the JSON blob.
+  function set(string memory _jsonBlob, string memory _path, string memory _value) external pure returns (string memory);
 
-  function compact(string calldata jsonBlob) view external returns (string memory);
+  /// @dev Sets the values at the specified paths in the JSON blob.
+  function set(string memory _jsonBlob, string[] memory _paths, string[] memory _values) external pure returns (string memory);
 
-  function set(string calldata jsonBlob, string calldata path, string calldata value) view external returns (string memory);
+  /// @dev Sets the raw value at the specified path in the JSON blob.
+  function setRaw(string memory _jsonBlob, string memory _path, string memory _rawBlob) external pure returns (string memory);
 
-  function set(string calldata jsonBlob, string[] memory paths, string[] memory values) view external returns (string memory);
+  /// @dev Sets the raw values at the specified paths in the JSON blob.
+  function setRaw(string memory _jsonBlob, string[] memory _paths, string[] memory _rawBlobs) external pure returns (string memory);
 
-  function setRaw(string calldata jsonBlob, string calldata path, string calldata rawBlob) view external returns (string memory);
+  /// @dev Sets the `int256` value at the specified path in the JSON blob.
+  function setInt(string memory _jsonBlob, string memory _path, int256 _value) external pure returns (string memory);
 
-  function setRaw(string calldata jsonBlob, string[] memory paths, string[] memory rawBlobs) view external returns (string memory);
+  /// @dev Sets the `int256` values at the specified paths in the JSON blob.
+  function setInt(string memory _jsonBlob, string[] memory _paths, int256[] memory _values) external pure returns (string memory);
 
-  function setInt(string calldata jsonBlob, string calldata path, int256 value) view external returns (string memory);
+  /// @dev Sets the `uint256` value at the specified path in the JSON blob.
+  function setUint(string memory _jsonBlob, string memory _path, uint256 _value) external pure returns (string memory);
 
-  function setInt(string calldata jsonBlob, string[] memory paths, int256[] memory values) view external returns (string memory);
+  /// @dev Sets the `uint256` values at the specified paths in the JSON blob.
+  function setUint(string memory _jsonBlob, string[] memory _paths, uint256[] memory _values) external pure returns (string memory);
 
-  function setUint(string calldata jsonBlob, string calldata path, uint256 value) view external returns (string memory);
+  /// @dev Sets the `bool` value at the specified path in the JSON blob.
+  function setBool(string memory _jsonBlob, string memory _path, bool _value) external pure returns (string memory);
 
-  function setUint(string calldata jsonBlob, string[] memory paths, uint256[] memory values) view external returns (string memory);
+  /// @dev Sets the `bool` values at the specified paths in the JSON blob.
+  function setBool(string memory _jsonBlob, string[] memory _paths, bool[] memory _values) external pure returns (string memory);
 
-  function setBool(string calldata jsonBlob, string calldata path, bool value) view external returns (string memory);
+  function subReplace(string memory _jsonBlob, string memory _search_path, string memory _replace_path, string memory _value) external pure returns (string memory);
 
-  function setBool(string calldata jsonBlob, string[] memory paths, bool[] memory values) view external returns (string memory);
+  function subReplace(string memory _jsonBlob, string memory _search_path, string[] memory _replace_paths, string[] memory _values) external pure returns (string memory);
 
-  function subReplace(string calldata jsonBlob, string calldata searchPath, string calldata replacePath, string calldata value) view external returns (string memory);
+  function subReplaceInt(string memory _jsonBlob, string memory _search_path, string memory _replace_path, int256 _value) external pure returns (string memory);
 
-  function subReplace(string calldata jsonBlob, string calldata searchPath, string[] memory replacePaths, string[] memory values) view external returns (string memory);
+  function subReplaceInt(string memory _jsonBlob, string memory _search_path, string[] memory _replace_paths, int256[] memory _values) external pure returns (string memory);
 
-  function subReplaceInt(string calldata jsonBlob, string calldata searchPath, string calldata replacePath, int256 value) view external returns (string memory);
+  function subReplaceUint(string memory _jsonBlob, string memory _search_path, string memory _replace_path, uint256 _value) external pure returns (string memory);
 
-  function subReplaceInt(string calldata jsonBlob, string calldata searchPath, string[] memory replacePaths, int256[] memory values) view external returns (string memory);
+  function subReplaceUint(string memory _jsonBlob, string memory _search_path, string[] memory _replace_paths, uint256[] memory _values) external pure returns (string memory);
 
-  function subReplaceUint(string calldata jsonBlob, string calldata searchPath, string calldata replacePath, uint256 value) view external returns (string memory);
+  function subReplaceBool(string memory _jsonBlob, string memory _search_path, string memory _replace_path, bool _value) external pure returns (string memory);
 
-  function subReplaceUint(string calldata jsonBlob, string calldata searchPath, string[] memory replacePaths, uint256[] memory values) view external returns (string memory);
+  function subReplaceBool(string memory _jsonBlob, string memory _search_path, string[] memory _replace_paths, bool[] memory _values) external pure returns (string memory);
 
-  function subReplaceBool(string calldata jsonBlob, string calldata searchPath, string calldata replacePath, bool value) view external returns (string memory);
-
-  function subReplaceBool(string calldata jsonBlob, string calldata searchPath, string[] memory replacePaths, bool[] memory values) view external returns (string memory);
-
-  function remove(string calldata jsonBlob, string calldata path) view external returns (string memory);
+  /// @dev Removes the value at the specified path in the JSON blob.
+  function remove(string memory _jsonBlob, string memory _path) external pure returns (string memory);
 
 }
