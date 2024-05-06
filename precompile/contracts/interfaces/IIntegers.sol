@@ -1,11 +1,31 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.24;
 
 interface IIntegers {
 
-  function toString(uint256 _i) view external returns (string memory);
-  function toString(int256 _i) view external returns (string memory);
-  function toHexString(uint256 _i) view external returns (string memory);
-  function fromHexString(string calldata _str) view external returns (uint256);
+    /**
+     * @dev Converts a `uint256` to its ASCII `string` representation.
+     */
+    function toString(uint256 _i) external pure returns (string memory);
+
+    /**
+     * @dev Converts a `int256` to its ASCII `string` representation.
+     */
+    function toString(int256 _i) external pure returns (string memory);
+
+    /**
+     * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation.
+     */
+    function toHexString(uint256 _i) external pure returns (string memory);
+
+    /**
+     * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length.
+     */
+    function toHexString(uint256 _i, uint256 _length) external pure returns (string memory);
+
+    /**
+     * @dev Converts a hexadecimal `string` to its `uint256` representation.
+     */
+    function fromHexString(string memory _str) external pure returns (uint256);
 
 }
