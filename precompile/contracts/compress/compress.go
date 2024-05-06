@@ -6,7 +6,7 @@ import (
 
 	"github.com/andybalholm/brotli"
 	"github.com/ethereum/go-ethereum/precompile"
-	"github.com/ethereum/go-ethereum/precompile/bindings"
+	"github.com/ethereum/go-ethereum/precompile/abi"
 )
 
 type Compress struct {
@@ -19,7 +19,7 @@ type Compress struct {
 func NewCompress() *Compress {
 	return &Compress{
 		StatefulPrecompiledContract: precompile.NewStatefulPrecompiledContract(
-			bindings.CompressABI,
+			abi.CompressABI,
 		),
 		reader: brotli.NewReader(nil),
 		writer: brotli.NewWriterLevel(nil, brotli.DefaultCompression),

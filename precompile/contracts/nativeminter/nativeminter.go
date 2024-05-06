@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/precompile"
-	"github.com/ethereum/go-ethereum/precompile/bindings"
+	"github.com/ethereum/go-ethereum/precompile/abi"
 )
 
 type NativeMinter struct {
@@ -17,7 +17,7 @@ type NativeMinter struct {
 func NewNativeMinter() *NativeMinter {
 	return &NativeMinter{
 		StatefulPrecompiledContract: precompile.NewStatefulPrecompiledContract(
-			bindings.NativeMinterABI,
+			abi.NativeMinterABI,
 		),
 	}
 }

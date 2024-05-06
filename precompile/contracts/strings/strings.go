@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/precompile"
-	"github.com/ethereum/go-ethereum/precompile/bindings"
+	"github.com/ethereum/go-ethereum/precompile/abi"
 )
 
 type Strings struct {
@@ -15,7 +15,7 @@ type Strings struct {
 func NewStrings() *Strings {
 	return &Strings{
 		StatefulPrecompiledContract: precompile.NewStatefulPrecompiledContract(
-			bindings.StringsABI,
+			abi.StringsABI,
 		),
 	}
 }

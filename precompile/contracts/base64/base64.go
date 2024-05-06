@@ -4,7 +4,7 @@ import (
 	b64 "encoding/base64"
 
 	"github.com/ethereum/go-ethereum/precompile"
-	"github.com/ethereum/go-ethereum/precompile/bindings"
+	"github.com/ethereum/go-ethereum/precompile/abi"
 )
 
 type Base64 struct {
@@ -14,7 +14,7 @@ type Base64 struct {
 func NewBase64() *Base64 {
 	return &Base64{
 		StatefulPrecompiledContract: precompile.NewStatefulPrecompiledContract(
-			bindings.Base64ABI,
+			abi.Base64ABI,
 		),
 	}
 }

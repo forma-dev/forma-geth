@@ -8,7 +8,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/precompile"
-	"github.com/ethereum/go-ethereum/precompile/bindings"
+	"github.com/ethereum/go-ethereum/precompile/abi"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	"github.com/valyala/fastjson"
@@ -21,7 +21,7 @@ type JsonUtil struct {
 func NewJsonUtil() *JsonUtil {
 	return &JsonUtil{
 		StatefulPrecompiledContract: precompile.NewStatefulPrecompiledContract(
-			bindings.JsonUtilABI,
+			abi.JsonUtilABI,
 		),
 	}
 }
