@@ -7,7 +7,7 @@ on:
     branches:
       - "main"
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v(.*)"
   # trigger on pull request updates when target is `main` branch
   pull_request:
     branches:
