@@ -76,7 +76,7 @@ func (pm *precompileManager) Run(
 	// Try to get the method from the precompiled contracts using the method ID
 	method, exists := pm.pMethods[addr][methodId]
 	if !exists {
-		return nil, 0, fmt.Errorf("no method with id %v in precompiled contract at address %v", methodId, addr.Hex())
+		return nil, 0, fmt.Errorf("no method with id %x in precompiled contract at address %v", methodId, addr.Hex())
 	}
 
 	// refund gas for act of calling custom precompile
