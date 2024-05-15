@@ -53,3 +53,10 @@ func (m *mockStateDB) SetState(address common.Address, hash common.Hash, value c
 	}
 	m.states[address][hash] = value
 }
+
+func (m *mockStateDB) GetCommittedState(address common.Address, hash common.Hash) common.Hash {
+	if _, ok := m.states[address]; !ok {
+		m.states[address] = make(map[common.Hash]common.Hash)
+	}
+	return m.states[address][hash]
+}

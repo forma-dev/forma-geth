@@ -13,11 +13,13 @@ type StateDB interface {
 	GetBalance(common.Address) *big.Int
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
+	GetCommittedState(common.Address, common.Hash) common.Hash
 }
 
 type StatefulContext interface {
 	SetState(common.Hash, common.Hash) error
 	GetState(common.Hash) common.Hash
+	GetCommittedState(common.Hash) common.Hash
 	SubBalance(common.Address, *big.Int) error
 	AddBalance(common.Address, *big.Int) error
 	GetBalance(common.Address) *big.Int

@@ -41,6 +41,10 @@ func (sc *statefulContext) GetState(key common.Hash) common.Hash {
 	return sc.state.GetState(sc.address, key)
 }
 
+func (sc *statefulContext) GetCommittedState(key common.Hash) common.Hash {
+	return sc.state.GetCommittedState(sc.address, key)
+}
+
 func (sc *statefulContext) SubBalance(address common.Address, amount *big.Int) error {
 	if sc.readOnly {
 		return ErrWriteProtection
