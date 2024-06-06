@@ -155,7 +155,6 @@ func (s *ExecutionServiceServerV1Alpha2) GetGenesisInfo(ctx context.Context, req
 	res := &astriaPb.GenesisInfo{
 		RollupId:                    rollupId[:],
 		SequencerGenesisBlockHeight: s.bc.Config().AstriaSequencerInitialHeight,
-		CelestiaBaseBlockHeight:     s.bc.Config().AstriaCelestiaInitialHeight,
 		CelestiaBlockVariance:       s.bc.Config().AstriaCelestiaHeightVariance,
 	}
 
@@ -240,55 +239,12 @@ func (s *ExecutionServiceServerV1Alpha2) ExecuteBlock(ctx context.Context, req *
 
 	txsToProcess := types.Transactions{}
 	for _, tx := range req.Transactions {
-		if deposit := tx.GetDeposit(); deposit != nil {
-			bridgeAddress := string(deposit.BridgeAddress.GetInner())
-			bac, ok := s.bridgeAddresses[bridgeAddress]
-			if !ok {
-				log.Debug("ignoring deposit tx from unknown bridge", "bridgeAddress", bridgeAddress)
-				continue
-			}
-
-			if len(deposit.AssetId) != 32 {
-				log.Debug("ignoring deposit tx with invalid asset ID", "assetID", deposit.AssetId)
-				continue
-			}
-			assetID := [32]byte{}
-			copy(assetID[:], deposit.AssetId[:32])
-			if _, ok := s.bridgeAllowedAssetIDs[assetID]; !ok {
-				log.Debug("ignoring deposit tx with disallowed asset ID", "assetID", deposit.AssetId)
-				continue
-			}
-
-			amount := protoU128ToBigInt(deposit.Amount)
-			address := common.HexToAddress(deposit.DestinationChainAddress)
-			txdata := types.DepositTx{
-				From:  address,
-				Value: bac.ScaledDepositAmount(amount),
-				Gas:   0,
-			}
-
-			tx := types.NewTx(&txdata)
-			txsToProcess = append(txsToProcess, tx)
-		} else {
-			ethTx := new(types.Transaction)
-			err := ethTx.UnmarshalBinary(tx.GetSequencedData())
-			if err != nil {
-				log.Error("failed to unmarshal sequenced data into transaction, ignoring", "tx hash", sha256.Sum256(tx.GetSequencedData()), "err", err)
-				continue
-			}
-
-			if ethTx.Type() == types.DepositTxType {
-				log.Debug("ignoring deposit tx in sequenced data", "tx hash", sha256.Sum256(tx.GetSequencedData()))
-				continue
-			}
-
-			if ethTx.Type() == types.BlobTxType {
-				log.Debug("ignoring blob tx in sequenced data", "tx hash", sha256.Sum256(tx.GetSequencedData()))
-				continue
-			}
-
-			txsToProcess = append(txsToProcess, ethTx)
+		unmarshalledTx, err := validateAndUnmarshalSequencerTx(tx, s.bridgeAddresses, s.bridgeAllowedAssetIDs)
+		if err != nil {
+			log.Debug("failed to validate sequencer tx, ignoring", "tx", tx, "err", err)
+			continue
 		}
+		txsToProcess = append(txsToProcess, unmarshalledTx)
 	}
 
 	// This set of ordered TXs on the TxPool is has been configured to be used by
@@ -359,12 +315,15 @@ func (s *ExecutionServiceServerV1Alpha2) GetCommitmentState(ctx context.Context,
 		return nil, status.Error(codes.Internal, "could not locate firm block")
 	}
 
+	celestiaBlock := s.bc.CurrentBaseCelestiaHeight()
+
 	res := &astriaPb.CommitmentState{
-		Soft: softBlock,
-		Firm: firmBlock,
+		Soft:               softBlock,
+		Firm:               firmBlock,
+		BaseCelestiaHeight: celestiaBlock,
 	}
 
-	log.Info("GetCommitmentState completed", "soft_height", res.Soft.Number, "firm_height", res.Firm.Number)
+	log.Info("GetCommitmentState completed", "soft_height", res.Soft.Number, "firm_height", res.Firm.Number, "base_celestia_height", res.BaseCelestiaHeight)
 	getCommitmentStateSuccessCount.Inc(1)
 	s.getCommitmentStateCalled = true
 	return res, nil
@@ -383,6 +342,11 @@ func (s *ExecutionServiceServerV1Alpha2) UpdateCommitmentState(ctx context.Conte
 
 	if !s.syncMethodsCalled() {
 		return nil, status.Error(codes.PermissionDenied, "Cannot update commitment state until GetGenesisInfo && GetCommitmentState methods are called")
+	}
+
+	if s.bc.CurrentBaseCelestiaHeight() > req.CommitmentState.BaseCelestiaHeight {
+		errStr := fmt.Sprintf("Base Celestia height cannot be decreased, current_base_celestia_height: %d, new_base_celestia_height: %d", s.bc.CurrentBaseCelestiaHeight(), req.CommitmentState.BaseCelestiaHeight)
+		return nil, status.Error(codes.InvalidArgument, errStr)
 	}
 
 	softEthHash := common.BytesToHash(req.CommitmentState.Soft.Hash)
@@ -431,7 +395,7 @@ func (s *ExecutionServiceServerV1Alpha2) UpdateCommitmentState(ctx context.Conte
 	}
 	currentFirm := s.bc.CurrentFinalBlock().Hash()
 	if currentFirm != firmEthHash {
-		s.bc.SetFinalized(firmBlock.Header())
+		s.bc.SetCelestiaFinalized(firmBlock.Header(), req.CommitmentState.BaseCelestiaHeight)
 	}
 
 	log.Info("UpdateCommitmentState completed", "soft_height", softBlock.NumberU64(), "firm_height", firmBlock.NumberU64())
