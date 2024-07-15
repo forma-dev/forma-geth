@@ -1,0 +1,45 @@
+default:
+  @just --list
+
+set dotenv-load
+set fallback
+
+# build a local geth binary
+build:
+    cd ../../ && make geth
+
+# initialize a local geth node
+init:
+    mkdir -p ./geth-data
+    ../../build/bin/geth \
+      --datadir ./geth-data \
+      --db.engine pebble \
+      init ./genesis.json
+
+# start a local geth node
+run log_level="3":
+    ../../build/bin/geth \
+      --datadir ./geth-data \
+      --db.engine=pebble \
+      --networkid=1337 \
+      --http \
+      --http.addr=0.0.0.0 \
+      --http.port=8545 \
+      --http.corsdomain=* \
+      --http.vhosts=* \
+      --http.api=eth,net,web3,debug,txpool \
+      --ws \
+      --ws.addr=0.0.0.0 \
+      --ws.port=8546 \
+      --ws.origins=* \
+      --grpc \
+      --grpc.addr=0.0.0.0 \
+      --grpc.port=50051 \
+      --gcmode=archive \
+      --verbosity {{log_level}}
+
+# clean geth data dir
+clean:
+    rm -rf ./geth-data
+
+clean-restart: clean init run
