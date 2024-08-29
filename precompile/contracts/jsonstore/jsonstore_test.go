@@ -1,12 +1,12 @@
 package jsonstore
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/precompile"
 	"github.com/ethereum/go-ethereum/precompile/mocks"
+	"github.com/holiman/uint256"
 )
 
 const (
@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	zero = big.NewInt(0)
+	zero = uint256.NewInt(0)
 
 	Slot0 = common.HexToHash("0x00")
 	Slot1 = common.HexToHash("0x01")

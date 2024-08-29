@@ -1,16 +1,16 @@
 package precompile
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 )
 
 type statefulContext struct {
 	state     StateDB
 	address   common.Address
 	msgSender common.Address
-	msgValue  *big.Int
+	msgValue  *uint256.Int
 	readOnly  bool
 }
 
@@ -18,7 +18,7 @@ func NewStatefulContext(
 	state StateDB,
 	address common.Address,
 	msgSender common.Address,
-	msgValue *big.Int,
+	msgValue *uint256.Int,
 ) StatefulContext {
 	return &statefulContext{
 		state:     state,
@@ -45,23 +45,23 @@ func (sc *statefulContext) GetCommittedState(key common.Hash) common.Hash {
 	return sc.state.GetCommittedState(sc.address, key)
 }
 
-func (sc *statefulContext) SubBalance(address common.Address, amount *big.Int) error {
+func (sc *statefulContext) SubBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) error {
 	if sc.readOnly {
 		return ErrWriteProtection
 	}
-	sc.state.SubBalance(address, amount)
+	sc.state.SubBalance(address, amount, reason)
 	return nil
 }
 
-func (sc *statefulContext) AddBalance(address common.Address, amount *big.Int) error {
+func (sc *statefulContext) AddBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) error {
 	if sc.readOnly {
 		return ErrWriteProtection
 	}
-	sc.state.AddBalance(address, amount)
+	sc.state.AddBalance(address, amount, reason)
 	return nil
 }
 
-func (sc *statefulContext) GetBalance(address common.Address) *big.Int {
+func (sc *statefulContext) GetBalance(address common.Address) *uint256.Int {
 	return sc.state.GetBalance(address)
 }
 
@@ -73,7 +73,7 @@ func (sc *statefulContext) MsgSender() common.Address {
 	return sc.msgSender
 }
 
-func (sc *statefulContext) MsgValue() *big.Int {
+func (sc *statefulContext) MsgValue() *uint256.Int {
 	return sc.msgValue
 }
 

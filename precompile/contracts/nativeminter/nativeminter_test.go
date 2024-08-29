@@ -1,16 +1,17 @@
 package nativeminter
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/precompile"
 	"github.com/ethereum/go-ethereum/precompile/mocks"
+	"github.com/holiman/uint256"
 )
 
 var (
-	zero = big.NewInt(0)
+	zero = uint256.NewInt(0)
 
 	SelfAddrForTest  = common.HexToAddress("0x1000")
 	OwnerForTest     = common.BytesToAddress([]byte("0xOwner"))
@@ -23,18 +24,18 @@ func TestInvalidMintAndBurn(t *testing.T) {
 	minter := NewNativeMinter()
 
 	recipient := RecipientForTest
-	amount := big.NewInt(100)
+	amount := uint256.NewInt(100)
 
 	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, MinterForTest, amount)
 
-	_, err := minter.Mint(ctx, recipient, amount)
+	_, err := minter.Mint(ctx, recipient, amount.ToBig())
 	if err == nil {
 		t.Fatalf("Expected error when minting, got nil")
 	}
 
-	ctx.AddBalance(recipient, amount)
+	ctx.AddBalance(recipient, amount, tracing.BalanceIncreaseNativeMint)
 
-	_, err = minter.Burn(ctx, recipient, amount)
+	_, err = minter.Burn(ctx, recipient, amount.ToBig())
 	if err == nil {
 		t.Fatalf("Expected error when minting, got nil")
 	}
@@ -45,14 +46,14 @@ func TestValidMintAndBurn(t *testing.T) {
 	minter := NewNativeMinter()
 
 	recipient := RecipientForTest
-	amount := big.NewInt(100)
+	amount := uint256.NewInt(100)
 
 	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, MinterForTest, amount)
 
 	// set minter in state db for testing
 	ctx.SetState(Slots.Minter, common.BytesToHash(MinterForTest.Bytes()))
 
-	_, err := minter.Mint(ctx, recipient, amount)
+	_, err := minter.Mint(ctx, recipient, amount.ToBig())
 	if err != nil {
 		t.Fatalf("Minting failed with error: %v", err)
 	}
@@ -62,7 +63,7 @@ func TestValidMintAndBurn(t *testing.T) {
 		t.Fatalf("Expected balance of %v, got %v", amount, balance)
 	}
 
-	_, err = minter.Burn(ctx, recipient, amount)
+	_, err = minter.Burn(ctx, recipient, amount.ToBig())
 	if err != nil {
 		t.Fatalf("Burning failed with error: %v", err)
 	}
@@ -80,7 +81,7 @@ func TestTransferOwnership(t *testing.T) {
 	owner := OwnerForTest
 	newOwner := common.BytesToAddress([]byte("0xNewOwner"))
 
-	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, owner, big.NewInt(0))
+	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, owner, uint256.NewInt(0))
 
 	_, err := minter.TransferOwnership(ctx, newOwner)
 	if err == nil {
@@ -120,7 +121,7 @@ func TestRenounceOwnership(t *testing.T) {
 
 	owner := OwnerForTest
 
-	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, owner, big.NewInt(0))
+	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, owner, uint256.NewInt(0))
 
 	_, err := minter.RenounceOwnership(ctx)
 	if err == nil {
@@ -152,7 +153,7 @@ func TestSetMinter(t *testing.T) {
 	owner := OwnerForTest
 	newMinter := MinterForTest
 
-	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, owner, big.NewInt(0))
+	ctx := precompile.NewStatefulContext(stateDB, SelfAddrForTest, owner, uint256.NewInt(0))
 
 	// check current minter is zero address (not set)
 	setMinter, err := minter.Minter(ctx)

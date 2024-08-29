@@ -1,16 +1,18 @@
 package precompile
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 )
 
+// type BalanceChangeReason byte
+
 type StateDB interface {
-	SubBalance(common.Address, *big.Int)
-	AddBalance(common.Address, *big.Int)
-	GetBalance(common.Address) *big.Int
+	SubBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
+	AddBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
+	GetBalance(common.Address) *uint256.Int
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 	GetCommittedState(common.Address, common.Hash) common.Hash
@@ -20,12 +22,12 @@ type StatefulContext interface {
 	SetState(common.Hash, common.Hash) error
 	GetState(common.Hash) common.Hash
 	GetCommittedState(common.Hash) common.Hash
-	SubBalance(common.Address, *big.Int) error
-	AddBalance(common.Address, *big.Int) error
-	GetBalance(common.Address) *big.Int
+	SubBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason) error
+	AddBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason) error
+	GetBalance(common.Address) *uint256.Int
 	Address() common.Address
 	MsgSender() common.Address
-	MsgValue() *big.Int
+	MsgValue() *uint256.Int
 	IsReadOnly() bool
 	SetReadOnly(bool)
 }

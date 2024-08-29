@@ -2,14 +2,15 @@ package vm
 
 import (
 	"fmt"
-	"math/big"
 	"reflect"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/precompile"
+	"github.com/holiman/uint256"
 )
 
 type methodID [4]byte
@@ -29,7 +30,7 @@ type precompileManager struct {
 	gMethods    map[common.Address]gasMethods
 }
 
-func NewPrecompileManager(evm *EVM) PrecompileManager {
+func NewPrecompileManager(evm *EVM) *precompileManager {
 	precompiles := make(map[common.Address]precompile.StatefulPrecompiledContract)
 	pMethods := make(map[common.Address]precompileMethods)
 	gMethods := make(map[common.Address]gasMethods)
@@ -55,15 +56,16 @@ func (pm *precompileManager) Run(
 	addr common.Address,
 	input []byte,
 	caller common.Address,
-	value *big.Int,
+	value *uint256.Int,
 	suppliedGas uint64,
+	logger *tracing.Hooks,
 	readOnly bool,
 ) (ret []byte, remainingGas uint64, err error) {
 
 	// run core evm precompile
 	p, isEvmPrecompile := pm.evm.precompile(addr)
 	if isEvmPrecompile {
-		return RunPrecompiledContract(p, input, suppliedGas)
+		return RunPrecompiledContract(p, input, suppliedGas, logger)
 	}
 
 	contract, ok := pm.precompiles[addr]
@@ -136,6 +138,10 @@ func (pm *precompileManager) Run(
 
 	if gasCost > suppliedGas {
 		return nil, 0, ErrOutOfGas
+	}
+
+	if logger != nil && logger.OnGasChange != nil {
+		logger.OnGasChange(suppliedGas, suppliedGas-gasCost, tracing.GasChangeCallPrecompiledContract)
 	}
 
 	// call the precompile method

@@ -20,18 +20,20 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/precompile"
+	"github.com/holiman/uint256"
 )
 
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
+	CreateContract(common.Address)
 
-	SubBalance(common.Address, *big.Int)
-	AddBalance(common.Address, *big.Int)
-	GetBalance(common.Address) *big.Int
+	SubBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
+	AddBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
+	GetBalance(common.Address) *uint256.Int
 
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
@@ -48,6 +50,7 @@ type StateDB interface {
 	GetCommittedState(common.Address, common.Hash) common.Hash
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
+	GetStorageRoot(addr common.Address) common.Hash
 
 	GetTransientState(addr common.Address, key common.Hash) common.Hash
 	SetTransientState(addr common.Address, key, value common.Hash)
@@ -92,12 +95,4 @@ type CallContext interface {
 	DelegateCall(env *EVM, me ContractRef, addr common.Address, data []byte, gas *big.Int) ([]byte, error)
 	// Create creates a new contract
 	Create(env *EVM, me ContractRef, data []byte, gas, value *big.Int) ([]byte, common.Address, error)
-}
-
-// PrecompileManager registers and runs stateful precompiles
-type PrecompileManager interface {
-	IsPrecompile(addr common.Address) bool
-	Run(addr common.Address, input []byte, caller common.Address, value *big.Int, suppliedGas uint64, readonly bool) (ret []byte, remainingGas uint64, err error)
-	Register(addr common.Address, p precompile.StatefulPrecompiledContract) error
-	RegisterMap(m precompile.PrecompileMap) error
 }

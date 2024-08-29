@@ -46,9 +46,11 @@ type ExecutionServiceServerV1Alpha2 struct {
 	genesisInfoCalled        bool
 	getCommitmentStateCalled bool
 
-	bridgeAddresses       map[string]*params.AstriaBridgeAddressConfig // astria bridge addess to config for that bridge account
-	bridgeAllowedAssetIDs map[[32]byte]struct{}                        // a set of allowed asset IDs structs are left empty
-	nextFeeRecipient      common.Address                               // Fee recipient for the next block
+	bridgeAddresses     map[string]*params.AstriaBridgeAddressConfig // astria bridge addess to config for that bridge account
+	bridgeAllowedAssets map[string]struct{}                          // a set of allowed asset IDs structs are left empty
+	bridgeSenderAddress common.Address                               // address from which AstriaBridgeableERC20 contracts are called
+
+	nextFeeRecipient common.Address // Fee recipient for the next block
 }
 
 var (
@@ -93,27 +95,35 @@ func NewExecutionServiceServerV1Alpha2(eth *eth.Ethereum) (*ExecutionServiceServ
 	}
 
 	bridgeAddresses := make(map[string]*params.AstriaBridgeAddressConfig)
-	bridgeAllowedAssetIDs := make(map[[32]byte]struct{})
+	bridgeAllowedAssets := make(map[string]struct{})
 	if bc.Config().AstriaBridgeAddressConfigs == nil {
 		log.Warn("bridge addresses not set")
 	} else {
 		nativeBridgeSeen := false
 		for _, cfg := range bc.Config().AstriaBridgeAddressConfigs {
-			err := cfg.Validate()
+			err := cfg.Validate(bc.Config().AstriaSequencerAddressPrefix)
 			if err != nil {
 				return nil, fmt.Errorf("invalid bridge address config: %w", err)
 			}
 
-			if cfg.Erc20Asset != nil && nativeBridgeSeen {
-				return nil, errors.New("only one native bridge address is allowed")
-			}
-			if cfg.Erc20Asset != nil && !nativeBridgeSeen {
+			if cfg.Erc20Asset == nil {
+				if nativeBridgeSeen {
+					return nil, errors.New("only one native bridge address is allowed")
+				}
 				nativeBridgeSeen = true
 			}
 
-			bridgeAddresses[string(cfg.BridgeAddress)] = &cfg
-			assetID := sha256.Sum256([]byte(cfg.AssetDenom))
-			bridgeAllowedAssetIDs[assetID] = struct{}{}
+			if cfg.Erc20Asset != nil && bc.Config().AstriaBridgeSenderAddress == (common.Address{}) {
+				return nil, errors.New("astria bridge sender address must be set for bridged ERC20 assets")
+			}
+
+			bridgeAddresses[cfg.BridgeAddress] = &cfg
+			bridgeAllowedAssets[cfg.AssetDenom] = struct{}{}
+			if cfg.Erc20Asset == nil {
+				log.Info("bridge for sequencer native asset initialized", "bridgeAddress", cfg.BridgeAddress, "assetDenom", cfg.AssetDenom)
+			} else {
+				log.Info("bridge for ERC20 asset initialized", "bridgeAddress", cfg.BridgeAddress, "assetDenom", cfg.AssetDenom, "contractAddress", cfg.Erc20Asset.ContractAddress)
+			}
 		}
 	}
 
@@ -133,16 +143,13 @@ func NewExecutionServiceServerV1Alpha2(eth *eth.Ethereum) (*ExecutionServiceServ
 		}
 	}
 
-	if merger := eth.Merger(); !merger.PoSFinalized() {
-		merger.FinalizePoS()
-	}
-
 	return &ExecutionServiceServerV1Alpha2{
-		eth:                   eth,
-		bc:                    bc,
-		bridgeAddresses:       bridgeAddresses,
-		bridgeAllowedAssetIDs: bridgeAllowedAssetIDs,
-		nextFeeRecipient:      nextFeeRecipient,
+		eth:                 eth,
+		bc:                  bc,
+		bridgeAddresses:     bridgeAddresses,
+		bridgeAllowedAssets: bridgeAllowedAssets,
+		bridgeSenderAddress: bc.Config().AstriaBridgeSenderAddress,
+		nextFeeRecipient:    nextFeeRecipient,
 	}, nil
 }
 
@@ -150,10 +157,11 @@ func (s *ExecutionServiceServerV1Alpha2) GetGenesisInfo(ctx context.Context, req
 	log.Debug("GetGenesisInfo called")
 	getGenesisInfoRequestCount.Inc(1)
 
-	rollupId := sha256.Sum256([]byte(s.bc.Config().AstriaRollupName))
+	rollupHash := sha256.Sum256([]byte(s.bc.Config().AstriaRollupName))
+	rollupId := primitivev1.RollupId{Inner: rollupHash[:]}
 
 	res := &astriaPb.GenesisInfo{
-		RollupId:                    rollupId[:],
+		RollupId:                    &rollupId,
 		SequencerGenesisBlockHeight: s.bc.Config().AstriaSequencerInitialHeight,
 		CelestiaBlockVariance:       s.bc.Config().AstriaCelestiaHeightVariance,
 	}
@@ -166,6 +174,10 @@ func (s *ExecutionServiceServerV1Alpha2) GetGenesisInfo(ctx context.Context, req
 
 // GetBlock will return a block given an identifier.
 func (s *ExecutionServiceServerV1Alpha2) GetBlock(ctx context.Context, req *astriaPb.GetBlockRequest) (*astriaPb.Block, error) {
+	if req.GetIdentifier() == nil {
+		return nil, status.Error(codes.InvalidArgument, "identifier cannot be empty")
+	}
+
 	log.Debug("GetBlock called", "request", req)
 	getBlockRequestCount.Inc(1)
 
@@ -183,8 +195,13 @@ func (s *ExecutionServiceServerV1Alpha2) GetBlock(ctx context.Context, req *astr
 // BatchGetBlocks will return an array of Blocks given an array of block
 // identifiers.
 func (s *ExecutionServiceServerV1Alpha2) BatchGetBlocks(ctx context.Context, req *astriaPb.BatchGetBlocksRequest) (*astriaPb.BatchGetBlocksResponse, error) {
-	log.Debug("BatchGetBlocks called", "first block", req.Identifiers[0], "last block", req.Identifiers[len(req.Identifiers)-1], "total blocks", len(req.Identifiers))
+	if req.Identifiers == nil || len(req.Identifiers) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "identifiers cannot be empty")
+	}
+
 	batchGetBlockRequestCount.Inc(1)
+	log.Debug("BatchGetBlocks called", "num blocks requested", len(req.Identifiers))
+
 	var blocks []*astriaPb.Block
 
 	ids := req.GetIdentifiers()
@@ -217,6 +234,10 @@ func protoU128ToBigInt(u128 *primitivev1.Uint128) *big.Int {
 // ExecuteBlock drives deterministic derivation of a rollup block from sequencer
 // block data
 func (s *ExecutionServiceServerV1Alpha2) ExecuteBlock(ctx context.Context, req *astriaPb.ExecuteBlockRequest) (*astriaPb.Block, error) {
+	if err := validateStaticExecuteBlockRequest(req); err != nil {
+		log.Error("ExecuteBlock called with invalid ExecuteBlockRequest", "err", err)
+		return nil, status.Error(codes.InvalidArgument, "ExecuteBlockRequest is invalid")
+	}
 	log.Debug("ExecuteBlock called", "prevBlockHash", common.BytesToHash(req.PrevBlockHash), "tx_count", len(req.Transactions), "timestamp", req.Timestamp)
 	executeBlockRequestCount.Inc(1)
 
@@ -237,9 +258,12 @@ func (s *ExecutionServiceServerV1Alpha2) ExecuteBlock(ctx context.Context, req *
 		return nil, status.Error(codes.FailedPrecondition, "Block can only be created on top of soft block.")
 	}
 
+	// the height that this block will be at
+	height := s.bc.CurrentBlock().Number.Uint64() + 1
+
 	txsToProcess := types.Transactions{}
 	for _, tx := range req.Transactions {
-		unmarshalledTx, err := validateAndUnmarshalSequencerTx(tx, s.bridgeAddresses, s.bridgeAllowedAssetIDs)
+		unmarshalledTx, err := validateAndUnmarshalSequencerTx(height, tx, s.bridgeAddresses, s.bridgeAllowedAssets, s.bridgeSenderAddress)
 		if err != nil {
 			log.Debug("failed to validate sequencer tx, ignoring", "tx", tx, "err", err)
 			continue
@@ -332,6 +356,11 @@ func (s *ExecutionServiceServerV1Alpha2) GetCommitmentState(ctx context.Context,
 // UpdateCommitmentState replaces the whole CommitmentState with a new
 // CommitmentState.
 func (s *ExecutionServiceServerV1Alpha2) UpdateCommitmentState(ctx context.Context, req *astriaPb.UpdateCommitmentStateRequest) (*astriaPb.CommitmentState, error) {
+	if err := validateStaticCommitmentState(req.CommitmentState); err != nil {
+		log.Error("UpdateCommitmentState called with invalid CommitmentState", "err", err)
+		return nil, status.Error(codes.InvalidArgument, "CommitmentState is invalid")
+	}
+
 	log.Debug("UpdateCommitmentState called", "request_soft_height", req.CommitmentState.Soft.Number, "request_firm_height", req.CommitmentState.Firm.Number)
 	updateCommitmentStateRequestCount.Inc(1)
 	commitmentUpdateStart := time.Now()
@@ -393,6 +422,7 @@ func (s *ExecutionServiceServerV1Alpha2) UpdateCommitmentState(ctx context.Conte
 	if currentSafe != softEthHash {
 		s.bc.SetSafe(softBlock.Header())
 	}
+
 	currentFirm := s.bc.CurrentFinalBlock().Hash()
 	if currentFirm != firmEthHash {
 		s.bc.SetCelestiaFinalized(firmBlock.Header(), req.CommitmentState.BaseCelestiaHeight)

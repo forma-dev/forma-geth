@@ -6,8 +6,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/precompile"
 	"github.com/ethereum/go-ethereum/precompile/abi"
+	"github.com/holiman/uint256"
 )
 
 type NativeMinter struct {
@@ -87,7 +89,7 @@ func (c *NativeMinter) Mint(ctx precompile.StatefulContext, addr common.Address,
 		return false, err
 	}
 
-	ctx.AddBalance(addr, amount)
+	ctx.AddBalance(addr, uint256.MustFromBig(amount), tracing.BalanceIncreaseNativeMint)
 
 	return true, nil
 }
@@ -100,11 +102,12 @@ func (c *NativeMinter) Burn(ctx precompile.StatefulContext, addr common.Address,
 
 	// check balance is valid
 	balance := ctx.GetBalance(addr)
-	if balance.Cmp(amount) < 0 {
+	amountU256 := uint256.MustFromBig(amount)
+	if balance.Cmp(amountU256) < 0 {
 		return false, errors.New("insufficient balance for burn")
 	}
 
-	ctx.SubBalance(addr, amount)
+	ctx.SubBalance(addr, amountU256, tracing.BalanceDecreaseNativeBurn)
 
 	return true, nil
 }

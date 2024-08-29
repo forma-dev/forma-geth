@@ -17,24 +17,28 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	cmath "github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // ExecutionResult includes all output after executing given evm
 // message no matter the execution itself is successful or not.
 type ExecutionResult struct {
-	UsedGas    uint64 // Total used gas but include the refunded gas
-	Err        error  // Any error encountered during the execution(listed in core/vm/errors.go)
-	ReturnData []byte // Returned data from evm(function result or data supplied with revert opcode)
+	UsedGas     uint64 // Total used gas, not including the refunded gas
+	RefundedGas uint64 // Total gas refunded after execution
+	Err         error  // Any error encountered during the execution(listed in core/vm/errors.go)
+	ReturnData  []byte // Returned data from evm(function result or data supplied with revert opcode)
 }
 
 // Unwrap returns the internal evm error which allows us for further
@@ -65,7 +69,12 @@ func (result *ExecutionResult) Revert() []byte {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool, isEIP3860 bool) (uint64, error) {
+func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool, isEIP3860 bool, isDepositTx bool) (uint64, error) {
+	if isDepositTx {
+		// deposit txs are gasless
+		return 0, nil
+	}
+
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if isContractCreation && isHomestead {
@@ -241,7 +250,7 @@ func (st *StateTransition) to() common.Address {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).SetUint64(st.msg.GasLimit)
-	mgval = mgval.Mul(mgval, st.msg.GasPrice)
+	mgval.Mul(mgval, st.msg.GasPrice)
 	balanceCheck := new(big.Int).Set(mgval)
 	if st.msg.GasFeeCap != nil {
 		balanceCheck.SetUint64(st.msg.GasLimit)
@@ -260,20 +269,35 @@ func (st *StateTransition) buyGas() error {
 			mgval.Add(mgval, blobFee)
 		}
 	}
-	if have, want := st.state.GetBalance(st.msg.From), balanceCheck; have.Cmp(want) < 0 {
+	balanceCheckU256, overflow := uint256.FromBig(balanceCheck)
+	if overflow {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, st.msg.From.Hex())
+	}
+	if have, want := st.state.GetBalance(st.msg.From), balanceCheckU256; have.Cmp(want) < 0 {
 		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From.Hex(), have, want)
 	}
 	if err := st.gp.SubGas(st.msg.GasLimit); err != nil {
 		return err
 	}
-	st.gasRemaining += st.msg.GasLimit
+
+	if st.evm.Config.Tracer != nil && st.evm.Config.Tracer.OnGasChange != nil {
+		st.evm.Config.Tracer.OnGasChange(0, st.msg.GasLimit, tracing.GasChangeTxInitialBalance)
+	}
+	st.gasRemaining = st.msg.GasLimit
 
 	st.initialGas = st.msg.GasLimit
-	st.state.SubBalance(st.msg.From, mgval)
+	mgvalU256, _ := uint256.FromBig(mgval)
+	st.state.SubBalance(st.msg.From, mgvalU256, tracing.BalanceDecreaseGasBuy)
 	return nil
 }
 
 func (st *StateTransition) preCheck() error {
+	if st.msg.IsDepositTx {
+		// deposit txs do not require checks as they are part of rollup consensus,
+		// not txs that originate externally.
+		return nil
+	}
+
 	// Only check transactions that are not fake
 	msg := st.msg
 	if !msg.SkipAccountChecks {
@@ -323,13 +347,18 @@ func (st *StateTransition) preCheck() error {
 	}
 	// Check the blob version validity
 	if msg.BlobHashes != nil {
+		// The to field of a blob tx type is mandatory, and a `BlobTx` transaction internally
+		// has it as a non-nillable value, so any msg derived from blob transaction has it non-nil.
+		// However, messages created through RPC (eth_call) don't have this restriction.
+		if msg.To == nil {
+			return ErrBlobTxCreate
+		}
 		if len(msg.BlobHashes) == 0 {
-			return errors.New("blob transaction missing blob hashes")
+			return ErrMissingBlobHashes
 		}
 		for i, hash := range msg.BlobHashes {
-			if hash[0] != params.BlobTxHashVersion {
-				return fmt.Errorf("blob %d hash version mismatch (have %d, supported %d)",
-					i, hash[0], params.BlobTxHashVersion)
+			if !kzg4844.IsValidVersionedHash(hash[:]) {
+				return fmt.Errorf("blob %d has invalid hash version", i)
 			}
 		}
 	}
@@ -363,13 +392,20 @@ func (st *StateTransition) preCheck() error {
 // nil evm execution result.
 func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// if this is a deposit tx, we only need to mint funds and no gas is used.
-	if st.msg.IsDepositTx {
-		st.state.AddBalance(st.msg.From, st.msg.Value)
+	if st.msg.IsDepositTx && len(st.msg.Data) == 0 {
+		log.Debug("deposit tx minting funds", "to", *st.msg.To, "value", st.msg.Value)
+		st.state.AddBalance(*st.msg.To, uint256.MustFromBig(st.msg.Value), tracing.BalanceIncreaseAstriaDepositTx)
 		return &ExecutionResult{
 			UsedGas:    0,
 			Err:        nil,
 			ReturnData: nil,
 		}, nil
+	}
+
+	if st.msg.IsDepositTx {
+		st.initialGas = st.msg.GasLimit
+		st.gasRemaining = st.msg.GasLimit
+		log.Debug("deposit tx minting erc20", "to", *st.msg.To, "value", st.msg.Value)
 	}
 
 	// First check this message satisfies all consensus rules before
@@ -387,13 +423,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, err
 	}
 
-	if tracer := st.evm.Config.Tracer; tracer != nil {
-		tracer.CaptureTxStart(st.initialGas)
-		defer func() {
-			tracer.CaptureTxEnd(st.gasRemaining)
-		}()
-	}
-
 	var (
 		msg              = st.msg
 		sender           = vm.AccountRef(msg.From)
@@ -402,17 +431,24 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	)
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	gas, err := IntrinsicGas(msg.Data, msg.AccessList, contractCreation, rules.IsHomestead, rules.IsIstanbul, rules.IsShanghai)
+	gas, err := IntrinsicGas(msg.Data, msg.AccessList, contractCreation, rules.IsHomestead, rules.IsIstanbul, rules.IsShanghai, msg.IsDepositTx)
 	if err != nil {
 		return nil, err
 	}
 	if st.gasRemaining < gas {
 		return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gasRemaining, gas)
 	}
+	if t := st.evm.Config.Tracer; t != nil && t.OnGasChange != nil {
+		t.OnGasChange(st.gasRemaining, st.gasRemaining-gas, tracing.GasChangeTxIntrinsicGas)
+	}
 	st.gasRemaining -= gas
 
 	// Check clause 6
-	if msg.Value.Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From, msg.Value) {
+	value, overflow := uint256.FromBig(msg.Value)
+	if overflow {
+		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From.Hex())
+	}
+	if !value.IsZero() && !st.evm.Context.CanTransfer(st.state, msg.From, value) {
 		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From.Hex())
 	}
 
@@ -431,11 +467,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		vmerr error // vm errors do not effect consensus and are therefore not assigned to err
 	)
 	if contractCreation {
-		ret, _, st.gasRemaining, vmerr = st.evm.Create(sender, msg.Data, st.gasRemaining, msg.Value)
+		ret, _, st.gasRemaining, vmerr = st.evm.Create(sender, msg.Data, st.gasRemaining, value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From, st.state.GetNonce(sender.Address())+1)
-		ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), msg.Data, st.gasRemaining, msg.Value)
+		ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), msg.Data, st.gasRemaining, value)
 
 		// Forma: Make inbound Hyperlane tx (bridge in) a fixed gas cost
 		if st.evm.ChainConfig().IsForma() && st.to().Cmp(st.evm.ChainConfig().Forma.HyperlaneMailbox) == 0 && len(msg.Data) > 0 {
@@ -449,12 +485,24 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		}
 	}
 
+	// if this is a deposit tx, don't refund gas and also don't pay to the coinbase,
+	// as no gas was used.
+	if st.msg.IsDepositTx {
+		log.Debug("deposit tx executed", "to", *st.msg.To, "value", st.msg.Value, "from", st.msg.From, "gasUsed", st.gasUsed(), "err", vmerr)
+		return &ExecutionResult{
+			UsedGas:    st.gasUsed(),
+			Err:        vmerr,
+			ReturnData: ret,
+		}, nil
+	}
+
+	var gasRefund uint64
 	if !rules.IsLondon {
 		// Before EIP-3529: refunds were capped to gasUsed / 2
-		st.refundGas(params.RefundQuotient)
+		gasRefund = st.refundGas(params.RefundQuotient)
 	} else {
 		// After EIP-3529: refunds are capped to gasUsed / 5
-		st.refundGas(params.RefundQuotientEIP3529)
+		gasRefund = st.refundGas(params.RefundQuotientEIP3529)
 	}
 	effectiveTip := msg.GasPrice
 	if rules.IsLondon {
@@ -468,38 +516,51 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	} else {
 		fee := new(big.Int).SetUint64(st.gasUsed())
 		fee.Mul(fee, effectiveTip)
-		st.state.AddBalance(st.evm.Context.Coinbase, fee)
+		st.state.AddBalance(st.evm.Context.Coinbase, uint256.MustFromBig(fee), tracing.BalanceIncreaseRewardTransactionFee)
 
 		// collect base fee instead of burn
 		if rules.IsLondon && st.evm.Context.Coinbase.Cmp(common.Address{}) != 0 {
 			baseFee := new(big.Int).SetUint64(st.gasUsed())
 			baseFee.Mul(baseFee, st.evm.Context.BaseFee)
-			st.state.AddBalance(st.evm.Context.Coinbase, baseFee)
+			st.state.AddBalance(st.evm.Context.Coinbase, uint256.MustFromBig(baseFee), tracing.BalanceIncreaseRewardTransactionFee)
 		}
 	}
 
 	return &ExecutionResult{
-		UsedGas:    st.gasUsed(),
-		Err:        vmerr,
-		ReturnData: ret,
+		UsedGas:     st.gasUsed(),
+		RefundedGas: gasRefund,
+		Err:         vmerr,
+		ReturnData:  ret,
 	}, nil
 }
 
-func (st *StateTransition) refundGas(refundQuotient uint64) {
+func (st *StateTransition) refundGas(refundQuotient uint64) uint64 {
 	// Apply refund counter, capped to a refund quotient
 	refund := st.gasUsed() / refundQuotient
 	if refund > st.state.GetRefund() {
 		refund = st.state.GetRefund()
 	}
+
+	if st.evm.Config.Tracer != nil && st.evm.Config.Tracer.OnGasChange != nil && refund > 0 {
+		st.evm.Config.Tracer.OnGasChange(st.gasRemaining, st.gasRemaining+refund, tracing.GasChangeTxRefunds)
+	}
+
 	st.gasRemaining += refund
 
 	// Return ETH for remaining gas, exchanged at the original rate.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gasRemaining), st.msg.GasPrice)
-	st.state.AddBalance(st.msg.From, remaining)
+	remaining := uint256.NewInt(st.gasRemaining)
+	remaining.Mul(remaining, uint256.MustFromBig(st.msg.GasPrice))
+	st.state.AddBalance(st.msg.From, remaining, tracing.BalanceIncreaseGasReturn)
+
+	if st.evm.Config.Tracer != nil && st.evm.Config.Tracer.OnGasChange != nil && st.gasRemaining > 0 {
+		st.evm.Config.Tracer.OnGasChange(st.gasRemaining, 0, tracing.GasChangeTxLeftOverReturned)
+	}
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
 	st.gp.AddGas(st.gasRemaining)
+
+	return refund
 }
 
 // gasUsed returns the amount of gas used up by the state transition.

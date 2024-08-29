@@ -1,12 +1,13 @@
 package precompile_test
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/precompile"
 	"github.com/ethereum/go-ethereum/precompile/mocks"
+	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,7 @@ func setupStatefulContext() precompile.StatefulContext {
 	state := mocks.NewMockStateDB()
 	address := common.HexToAddress("0x123")
 	msgSender := common.HexToAddress("0x456")
-	msgValue := big.NewInt(1000)
+	msgValue := uint256.NewInt(1000)
 
 	return precompile.NewStatefulContext(state, address, msgSender, msgValue)
 }
@@ -31,7 +32,7 @@ func TestMsgSender(t *testing.T) {
 
 func TestMsgValue(t *testing.T) {
 	ctx := setupStatefulContext()
-	assert.Equal(t, big.NewInt(1000), ctx.MsgValue())
+	assert.Equal(t, uint256.NewInt(1000), ctx.MsgValue())
 }
 
 func TestIsReadOnly(t *testing.T) {
@@ -66,27 +67,27 @@ func TestBalance(t *testing.T) {
 	ctx := setupStatefulContext()
 
 	initialBalance := ctx.GetBalance(common.HexToAddress("0x123"))
-	assert.Equal(t, big.NewInt(0), initialBalance)
+	assert.Equal(t, uint256.NewInt(0), initialBalance)
 
-	amount := big.NewInt(500)
+	amount := uint256.NewInt(500)
 
-	err := ctx.AddBalance(common.HexToAddress("0x123"), amount)
+	err := ctx.AddBalance(common.HexToAddress("0x123"), amount, tracing.BalanceChangeUnspecified)
 	assert.NoError(t, err)
-	assert.Equal(t, big.NewInt(500), ctx.GetBalance(common.HexToAddress("0x123")))
+	assert.Equal(t, uint256.NewInt(500), ctx.GetBalance(common.HexToAddress("0x123")))
 
-	err = ctx.AddBalance(common.HexToAddress("0x123"), amount)
+	err = ctx.AddBalance(common.HexToAddress("0x123"), amount, tracing.BalanceChangeUnspecified)
 	assert.NoError(t, err)
-	assert.Equal(t, big.NewInt(1000), ctx.GetBalance(common.HexToAddress("0x123")))
+	assert.Equal(t, uint256.NewInt(1000), ctx.GetBalance(common.HexToAddress("0x123")))
 
-	err = ctx.SubBalance(common.HexToAddress("0x123"), amount)
+	err = ctx.SubBalance(common.HexToAddress("0x123"), amount, tracing.BalanceChangeUnspecified)
 	assert.NoError(t, err)
-	assert.Equal(t, big.NewInt(500), ctx.GetBalance(common.HexToAddress("0x123")))
+	assert.Equal(t, uint256.NewInt(500), ctx.GetBalance(common.HexToAddress("0x123")))
 
 	ctx.SetReadOnly(true)
 
-	err = ctx.AddBalance(common.HexToAddress("0x123"), amount)
+	err = ctx.AddBalance(common.HexToAddress("0x123"), amount, tracing.BalanceChangeUnspecified)
 	assert.Error(t, err)
 
-	err = ctx.SubBalance(common.HexToAddress("0x123"), amount)
+	err = ctx.SubBalance(common.HexToAddress("0x123"), amount, tracing.BalanceChangeUnspecified)
 	assert.Error(t, err)
 }

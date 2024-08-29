@@ -1,43 +1,43 @@
 package mocks
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/precompile"
+	"github.com/holiman/uint256"
 )
 
 type mockStateDB struct {
-	balances map[common.Address]*big.Int
+	balances map[common.Address]*uint256.Int
 	states   map[common.Address]map[common.Hash]common.Hash
 }
 
 func NewMockStateDB() precompile.StateDB {
 	return &mockStateDB{
-		balances: make(map[common.Address]*big.Int),
+		balances: make(map[common.Address]*uint256.Int),
 		states:   make(map[common.Address]map[common.Hash]common.Hash),
 	}
 }
 
-func (m *mockStateDB) SubBalance(address common.Address, amount *big.Int) {
+func (m *mockStateDB) SubBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	if _, ok := m.balances[address]; !ok {
-		m.balances[address] = big.NewInt(0)
+		m.balances[address] = uint256.NewInt(0)
 	}
 	m.balances[address].Sub(m.balances[address], amount)
 }
 
-func (m *mockStateDB) AddBalance(address common.Address, amount *big.Int) {
+func (m *mockStateDB) AddBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	if _, ok := m.balances[address]; !ok {
-		m.balances[address] = big.NewInt(0)
+		m.balances[address] = uint256.NewInt(0)
 	}
 	m.balances[address].Add(m.balances[address], amount)
 }
 
-func (m *mockStateDB) GetBalance(address common.Address) *big.Int {
+func (m *mockStateDB) GetBalance(address common.Address) *uint256.Int {
 	if _, ok := m.balances[address]; !ok {
-		m.balances[address] = big.NewInt(0)
+		m.balances[address] = uint256.NewInt(0)
 	}
-	return new(big.Int).Set(m.balances[address])
+	return new(uint256.Int).Set(m.balances[address])
 }
 
 func (m *mockStateDB) GetState(address common.Address, hash common.Hash) common.Hash {
