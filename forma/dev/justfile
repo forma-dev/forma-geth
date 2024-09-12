@@ -14,6 +14,7 @@ init:
     ../../build/bin/geth \
       --datadir ./geth-data \
       --db.engine pebble \
+      --state.scheme=hash \
       init ./genesis.json
 
 # start a local geth node
@@ -36,6 +37,9 @@ run log_level="3":
       --grpc.addr=0.0.0.0 \
       --grpc.port=50051 \
       --gcmode=archive \
+      --state.scheme=hash \
+      --history.transactions=0 \
+      --history.state=0 \
       --verbosity {{log_level}}
 
 # clean geth data dir
