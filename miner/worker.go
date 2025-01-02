@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math/big"
 	"sync/atomic"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
@@ -247,6 +246,7 @@ func (miner *Miner) commitAstriaTransactions(env *environment, txs *types.Transa
 	}
 
 	for i, tx := range *txs {
+
 		// Check interruption signal and abort building if it's fired.
 		if interrupt != nil {
 			if signal := interrupt.Load(); signal != commitInterruptNone {
@@ -295,6 +295,16 @@ func (miner *Miner) commitAstriaTransactions(env *environment, txs *types.Transa
 			log.Trace("Marking transaction as invalid", "hash", tx.Hash(), "err", err)
 			miner.txpool.AddToAstriaExcludedFromBlock(tx)
 		}
+
+		// Check if this is Forma mainnet and block 7720492.
+		// Only process first 14 transactions for this specific block because reasons
+		if miner.chainConfig.ChainID.Uint64() == 984122 && env.header.Number.Uint64() == 7720492 && env.tcount == 14 {
+			// remove the subsequent txs from the mempool
+			for _, txToRemove := range (*txs)[i:] {
+				miner.txpool.AddToAstriaExcludedFromBlock(txToRemove)
+			}
+			break
+		}
 	}
 
 	return nil
@@ -319,13 +329,7 @@ func (miner *Miner) generateWork(params *generateParams) *newPayloadResult {
 		return &newPayloadResult{err: err}
 	}
 	if !params.noTxs {
-		interrupt := new(atomic.Int32)
-		timer := time.AfterFunc(miner.config.Recommit, func() {
-			interrupt.Store(commitInterruptTimeout)
-		})
-		defer timer.Stop()
-
-		err := miner.fillAstriaTransactions(interrupt, work)
+		err := miner.fillAstriaTransactions(nil, work)
 		if errors.Is(err, errBlockInterruptedByTimeout) {
 			log.Warn("Block building is interrupted", "allowance", common.PrettyDuration(miner.config.Recommit))
 		}
