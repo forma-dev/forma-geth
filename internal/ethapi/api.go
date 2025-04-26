@@ -58,7 +58,7 @@ import (
 const estimateGasErrorRatio = 0.015
 
 var errBlobTxNotSupported = errors.New("blob transactions not supported")
-var errDepositTxNotSupported = errors.New("deposit transactions not supported")
+var errInjectedTxNotSupported = errors.New("injected transactions not supported")
 
 // EthereumAPI provides an API to access Ethereum related information.
 type EthereumAPI struct {
@@ -1765,8 +1765,8 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	if tx.Type() == types.BlobTxType {
 		return common.Hash{}, errBlobTxNotSupported
 	}
-	if tx.Type() == types.DepositTxType {
-		return common.Hash{}, errDepositTxNotSupported
+	if tx.Type() == types.InjectedTxType {
+		return common.Hash{}, errInjectedTxNotSupported
 	}
 
 	// If the transaction fee cap is already specified, ensure the
@@ -2200,11 +2200,11 @@ func checkTxFee(gasPrice *big.Int, gas uint64, cap float64) error {
 }
 
 func checkTxBaseFee(chainConfig *params.ChainConfig, blockNum uint64, tx *types.Transaction) error {
-	if chainConfig.AstriaEIP1559Params == nil {
+	if chainConfig.AstriaForks == nil {
 		return nil
 	}
 
-	baseFee := chainConfig.AstriaEIP1559Params.MinBaseFeeAt(blockNum)
+	baseFee := chainConfig.GetAstriaForks().MinBaseFeeAt(blockNum)
 	_, err := tx.EffectiveGasTip(baseFee)
 
 	return err

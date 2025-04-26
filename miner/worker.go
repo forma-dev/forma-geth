@@ -129,7 +129,7 @@ func (miner *Miner) prepareWork(genParams *generateParams) (*environment, error)
 	if miner.chainConfig.IsLondon(header.Number) {
 		header.BaseFee = eip1559.CalcBaseFee(miner.chainConfig, parent)
 		if !miner.chainConfig.IsLondon(parent.Number) {
-			parentGasLimit := parent.GasLimit * miner.chainConfig.ElasticityMultiplier(parent.Number.Uint64())
+			parentGasLimit := parent.GasLimit * miner.chainConfig.GetAstriaForks().ElasticityMultiplierAt(parent.Number.Uint64())
 			header.GasLimit = core.CalcGasLimit(parentGasLimit, miner.config.GasCeil)
 		}
 	}
@@ -258,7 +258,7 @@ func (miner *Miner) commitAstriaTransactions(env *environment, txs *types.Transa
 			}
 		}
 		// If we don't have enough gas for any further transactions then we're done.
-		if env.gasPool.Gas() < params.TxGas {
+		if env.gasPool.Gas() < params.TxGas && tx.Type() != types.InjectedTxType {
 			log.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
 			// remove txs from the mempool if they are too big for this block
 			for _, txToRemove := range (*txs)[i:] {
@@ -286,6 +286,8 @@ func (miner *Miner) commitAstriaTransactions(env *environment, txs *types.Transa
 		case errors.Is(err, core.ErrNonceTooLow):
 			// New head notification data race between the transaction pool and miner, shift
 			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+		case errors.Is(err, nil):
+			// Transaction successfully applied, continue
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
@@ -329,9 +331,11 @@ func (miner *Miner) generateWork(params *generateParams) *newPayloadResult {
 		return &newPayloadResult{err: err}
 	}
 	if !params.noTxs {
-		err := miner.fillAstriaTransactions(nil, work)
+		interrupt := new(atomic.Int32)
+
+		err := miner.fillAstriaTransactions(interrupt, work)
 		if errors.Is(err, errBlockInterruptedByTimeout) {
-			log.Warn("Block building is interrupted", "allowance", common.PrettyDuration(miner.config.Recommit))
+			log.Error("Block building is interrupted", "allowance", common.PrettyDuration(miner.config.Recommit))
 		}
 	}
 	body := types.Body{Transactions: work.txs, Withdrawals: params.withdrawals}

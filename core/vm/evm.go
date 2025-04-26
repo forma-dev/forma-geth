@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	pconfig "github.com/ethereum/go-ethereum/precompile/config"
-
 	"github.com/holiman/uint256"
 )
 
@@ -157,7 +156,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 
 	// Set up precompiles
 	evm.precompileManager = NewPrecompileManager(evm)
-	evm.precompileManager.RegisterMap(pconfig.PrecompileConfig(chainConfig, blockCtx.BlockNumber.Uint64(), blockCtx.Time))
+	evm.precompileManager.RegisterMap(pconfig.GetPrecompiles(chainConfig, blockCtx.BlockNumber.Uint64(), blockCtx.Time))
 
 	return evm
 }

@@ -54,4 +54,5 @@ tests/spec-tests/
 contracts/abi
 contracts/bin
 
-precompile/out/
+precompile/bindings
+precompile/out

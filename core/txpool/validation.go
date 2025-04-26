@@ -54,6 +54,10 @@ type ValidationOptions struct {
 // This check is public to allow different transaction pools to check the basic
 // rules without duplicating code and running the risk of missed updates.
 func ValidateTransaction(tx *types.Transaction, head *types.Header, signer types.Signer, opts *ValidationOptions) error {
+	if tx.Type() == types.BlobTxType {
+		return fmt.Errorf("%w: tx type %v not supported by Astria Geth", core.ErrTxTypeNotSupported, tx.Type())
+	}
+
 	// Ensure transactions not implemented by the calling pool are rejected
 	if opts.Accept&(1<<tx.Type()) == 0 {
 		return fmt.Errorf("%w: tx type %v not supported by this pool", core.ErrTxTypeNotSupported, tx.Type())
@@ -97,25 +101,23 @@ func ValidateTransaction(tx *types.Transaction, head *types.Header, signer types
 	if tx.GasFeeCapIntCmp(tx.GasTipCap()) < 0 {
 		return core.ErrTipAboveFeeCap
 	}
-	if tx.Type() != types.DepositTxType {
-		// Make sure the transaction is signed properly
-		if _, err := types.Sender(signer, tx); err != nil {
-			return ErrInvalidSender
-		}
-		// Ensure the transaction has more gas than the bare minimum needed to cover
-		// the transaction metadata
-		intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, opts.Config.IsIstanbul(head.Number), opts.Config.IsShanghai(head.Number, head.Time), false)
-		if err != nil {
-			return err
-		}
-		if tx.Gas() < intrGas {
-			return fmt.Errorf("%w: needed %v, allowed %v", core.ErrIntrinsicGas, intrGas, tx.Gas())
-		}
-		// Ensure the gasprice is high enough to cover the requirement of the calling
-		// pool and/or block producer
-		if tx.GasTipCapIntCmp(opts.MinTip) < 0 {
-			return fmt.Errorf("%w: tip needed %v, tip permitted %v", ErrUnderpriced, opts.MinTip, tx.GasTipCap())
-		}
+	// Make sure the transaction is signed properly
+	if _, err := types.Sender(signer, tx); err != nil {
+		return ErrInvalidSender
+	}
+	// Ensure the transaction has more gas than the bare minimum needed to cover
+	// the transaction metadata
+	intrGas, err := core.IntrinsicGas(tx.Data(), tx.AccessList(), tx.To() == nil, true, opts.Config.IsIstanbul(head.Number), opts.Config.IsShanghai(head.Number, head.Time), false)
+	if err != nil {
+		return err
+	}
+	if tx.Gas() < intrGas {
+		return fmt.Errorf("%w: needed %v, allowed %v", core.ErrIntrinsicGas, intrGas, tx.Gas())
+	}
+	// Ensure the gasprice is high enough to cover the requirement of the calling
+	// pool and/or block producer
+	if tx.GasTipCapIntCmp(opts.MinTip) < 0 {
+		return fmt.Errorf("%w: tip needed %v, tip permitted %v", ErrUnderpriced, opts.MinTip, tx.GasTipCap())
 	}
 	if tx.Type() == types.BlobTxType {
 		// Ensure the blob fee cap satisfies the minimum blob gas price
