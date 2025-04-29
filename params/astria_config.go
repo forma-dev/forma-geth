@@ -429,7 +429,8 @@ const (
 // Validate ensures the PrecompileType is a known value
 func (p PrecompileType) Validate() error {
 	switch p {
-	case PrecompileBase64:
+	case PrecompileBase64, PrecompileCompress, PrecompileJsonUtil, PrecompileJsonStore,
+		PrecompileNativeMinter, PrecompileStrings, PrecompileIntegers:
 		return nil
 	default:
 		return fmt.Errorf("unknown precompile type: %s", p)
