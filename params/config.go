@@ -507,6 +507,22 @@ func (c *ChainConfig) Description() string {
 		}
 		banner += "\n"
 	}
+	banner += "\n"
+
+	if c.IsForma() {
+		// show activated precompiles
+		banner += "Activated Forma Precompiles:\n"
+		for _, fork := range forks {
+			if len(fork.Precompiles) > 0 {
+				for _, precompile := range fork.Precompiles {
+					banner += fmt.Sprintf(" - %s : %s\n", precompile.Address.Hex(), precompile.Type)
+				}
+			}
+		}
+		banner += "\n"
+
+		banner += fmt.Sprintf("Forma Hyperlane Mailbox: %s\n", c.Forma.HyperlaneMailbox.Hex())
+	}
 
 	return banner
 }
