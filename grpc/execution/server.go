@@ -253,12 +253,13 @@ func (s *ExecutionServiceServerV2) ExecuteBlock(ctx context.Context, req *astria
 	}
 
 	blockTimestamp := uint64(req.GetTimestamp().GetSeconds())
+	var sequencerHash common.Hash
 	var sequencerHashRef *common.Hash
 	if s.bc.Config().IsCancun(big.NewInt(int64(height)), blockTimestamp) {
 		if req.SequencerBlockHash == "" {
 			return nil, status.Error(codes.InvalidArgument, "Sequencer block hash must be set for Cancun block")
 		}
-		sequencerHash := common.HexToHash(req.SequencerBlockHash)
+		sequencerHash = common.HexToHash(req.SequencerBlockHash)
 		sequencerHashRef = &sequencerHash
 	}
 
@@ -294,7 +295,7 @@ func (s *ExecutionServiceServerV2) ExecuteBlock(ctx context.Context, req *astria
 	payloadAttributes := &miner.BuildPayloadArgs{
 		Parent:       prevHeadHash,
 		Timestamp:    uint64(req.GetTimestamp().GetSeconds()),
-		Random:       common.Hash{},
+		Random:       sequencerHash,
 		FeeRecipient: s.activeFork.FeeCollector,
 		BeaconRoot:   sequencerHashRef,
 	}
